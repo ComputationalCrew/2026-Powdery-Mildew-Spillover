@@ -1,0 +1,1103 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import minimize
+
+np.set_printoptions(suppress=True)
+
+import warnings
+#suppress warnings
+warnings.filterwarnings('ignore')
+
+theta_list = []
+checkpoint_list = []
+
+period = ['may-jun'] # inputs: 'may-jun', 'jun-jul'
+
+# Import data
+
+X_2014 = np.load('.../data_2014_github.npz')
+N_2014 = X_2014['N']
+    
+
+X_2015 = np.load('.../data_2015_github.npz')
+N_2015 = X_2015['N']
+    
+
+X_2016 = np.load('.../data_2016_github.npz')
+N_2016 = X_2016['N']
+    
+
+X_2017 = np.load('.../data_2017_github.npz')
+N_2017 = X_2017['N']
+
+dist_2014 = X_2014['distance']
+tI1_2014 = X_2014['tI1'].reshape(N_2014,1)
+tI2_2014 = X_2014['tI2'].reshape(N_2014,1)
+sI2_2014 = X_2014['sI2'].reshape(N_2014,1)
+
+y_apr_2014 = X_2014['y_apr'].reshape(N_2014,1)
+y_may_2014 = X_2014['y_may'].reshape(N_2014,1)
+y_jun_2014 = X_2014['y_jun'].reshape(N_2014,1)
+y_jul_2014 = X_2014['y_jul'].reshape(N_2014,1)
+
+n_apr_2014 = X_2014['n_apr'].reshape(N_2014,1)
+n_may_2014 = X_2014['n_may'].reshape(N_2014,1)
+n_jun_2014 = X_2014['n_jun'].reshape(N_2014,1)
+n_jul_2014 = X_2014['n_jul'].reshape(N_2014,1)
+
+a_apr_2014 = X_2014['a_apr'].reshape(N_2014,1)
+a_may_2014 = X_2014['a_may'].reshape(N_2014,1)
+a_jun_2014 = X_2014['a_jun'].reshape(N_2014,1)
+a_jul_2014 = X_2014['a_jul'].reshape(N_2014,1)
+
+w_apr_2014 = X_2014['wind_apr']
+w_may_2014 = X_2014['wind_may']
+w_jun_2014 = X_2014['wind_jun']
+w_jul_2014 = X_2014['wind_jul']
+
+sI1_apr_2014 = X_2014['sI1_apr'].reshape(N_2014,1)
+sI1_may_2014 = X_2014['sI1_may'].reshape(N_2014,1)
+sI1_jun_2014 = X_2014['sI1_jun'].reshape(N_2014,1)
+sI1_jul_2014 = X_2014['sI1_jul'].reshape(N_2014,1)
+
+s_apr_2014 = X_2014['s_apr'].reshape(N_2014,1)
+s_may_2014 = X_2014['s_may'].reshape(N_2014,1)
+s_jun_2014 = X_2014['s_jun'].reshape(N_2014,1)
+s_jul_2014 = X_2014['s_jul'].reshape(N_2014,1)
+
+dist_2015 = X_2015['distance']
+tI1_2015 = X_2015['tI1'].reshape(N_2015,1)
+tI2_2015 = X_2015['tI2'].reshape(N_2015,1)
+sI2_2015 = X_2015['sI2'].reshape(N_2015,1)
+
+y_apr_2015 = X_2015['y_apr'].reshape(N_2015,1)
+y_may_2015 = X_2015['y_may'].reshape(N_2015,1)
+y_jun_2015 = X_2015['y_jun'].reshape(N_2015,1)
+y_jul_2015 = X_2015['y_jul'].reshape(N_2015,1)
+
+n_apr_2015 = X_2015['n_apr'].reshape(N_2015,1)
+n_may_2015 = X_2015['n_may'].reshape(N_2015,1)
+n_jun_2015 = X_2015['n_jun'].reshape(N_2015,1)
+n_jul_2015 = X_2015['n_jul'].reshape(N_2015,1)
+
+a_apr_2015 = X_2015['a_apr'].reshape(N_2015,1)
+a_may_2015 = X_2015['a_may'].reshape(N_2015,1)
+a_jun_2015 = X_2015['a_jun'].reshape(N_2015,1)
+a_jul_2015 = X_2015['a_jul'].reshape(N_2015,1)
+
+w_apr_2015 = X_2015['wind_apr']
+w_may_2015 = X_2015['wind_may']
+w_jun_2015 = X_2015['wind_jun']
+w_jul_2015 = X_2015['wind_jul']
+
+sI1_apr_2015 = X_2015['sI1_apr'].reshape(N_2015,1)
+sI1_may_2015 = X_2015['sI1_may'].reshape(N_2015,1)
+sI1_jun_2015 = X_2015['sI1_jun'].reshape(N_2015,1)
+sI1_jul_2015 = X_2015['sI1_jul'].reshape(N_2015,1)
+
+s_apr_2015 = X_2015['s_apr'].reshape(N_2015,1)
+s_may_2015 = X_2015['s_may'].reshape(N_2015,1)
+s_jun_2015 = X_2015['s_jun'].reshape(N_2015,1)
+s_jul_2015 = X_2015['s_jul'].reshape(N_2015,1)
+
+
+dist_2016 = X_2016['distance']
+tI1_2016 = X_2016['tI1'].reshape(N_2016,1)
+tI2_2016 = X_2016['tI2'].reshape(N_2016,1)
+sI2_2016 = X_2016['sI2'].reshape(N_2016,1)
+
+y_apr_2016 = X_2016['y_apr'].reshape(N_2016,1)
+y_may_2016 = X_2016['y_may'].reshape(N_2016,1)
+y_jun_2016 = X_2016['y_jun'].reshape(N_2016,1)
+y_jul_2016 = X_2016['y_jul'].reshape(N_2016,1)
+
+n_apr_2016 = X_2016['n_apr'].reshape(N_2016,1)
+n_may_2016 = X_2016['n_may'].reshape(N_2016,1)
+n_jun_2016 = X_2016['n_jun'].reshape(N_2016,1)
+n_jul_2016 = X_2016['n_jul'].reshape(N_2016,1)
+
+a_apr_2016 = X_2016['a_apr'].reshape(N_2016,1)
+a_may_2016 = X_2016['a_may'].reshape(N_2016,1)
+a_jun_2016 = X_2016['a_jun'].reshape(N_2016,1)
+a_jul_2016 = X_2016['a_jul'].reshape(N_2016,1)
+
+w_apr_2016 = X_2016['wind_apr']
+w_may_2016 = X_2016['wind_may']
+w_jun_2016 = X_2016['wind_jun']
+w_jul_2016 = X_2016['wind_jul']
+
+sI1_apr_2016 = X_2016['sI1_apr'].reshape(N_2016,1)
+sI1_may_2016 = X_2016['sI1_may'].reshape(N_2016,1)
+sI1_jun_2016 = X_2016['sI1_jun'].reshape(N_2016,1)
+sI1_jul_2016 = X_2016['sI1_jul'].reshape(N_2016,1)
+
+s_apr_2016 = X_2016['s_apr'].reshape(N_2016,1)
+s_may_2016 = X_2016['s_may'].reshape(N_2016,1)
+s_jun_2016 = X_2016['s_jun'].reshape(N_2016,1)
+s_jul_2016 = X_2016['s_jul'].reshape(N_2016,1)
+
+dist_2017 = X_2017['distance']
+tI1_2017 = X_2017['tI1'].reshape(N_2017,1)
+tI2_2017 = X_2017['tI2'].reshape(N_2017,1)
+sI2_2017 = X_2017['sI2'].reshape(N_2017,1)
+
+y_apr_2017 = X_2017['y_apr'].reshape(N_2017,1)
+y_may_2017 = X_2017['y_may'].reshape(N_2017,1)
+y_jun_2017 = X_2017['y_jun'].reshape(N_2017,1)
+y_jul_2017 = X_2017['y_jul'].reshape(N_2017,1)
+
+n_apr_2017 = X_2017['n_apr'].reshape(N_2017,1)
+n_may_2017 = X_2017['n_may'].reshape(N_2017,1)
+n_jun_2017 = X_2017['n_jun'].reshape(N_2017,1)
+n_jul_2017 = X_2017['n_jul'].reshape(N_2017,1)
+
+a_apr_2017 = X_2017['a_apr'].reshape(N_2017,1)
+a_may_2017 = X_2017['a_may'].reshape(N_2017,1)
+a_jun_2017 = X_2017['a_jun'].reshape(N_2017,1)
+a_jul_2017 = X_2017['a_jul'].reshape(N_2017,1)
+
+w_apr_2017 = X_2017['wind_apr']
+w_may_2017 = X_2017['wind_may']
+w_jun_2017 = X_2017['wind_jun']
+w_jul_2017 = X_2017['wind_jul']
+
+sI1_apr_2017 = X_2017['sI1_apr'].reshape(N_2017,1)
+sI1_may_2017 = X_2017['sI1_may'].reshape(N_2017,1)
+sI1_jun_2017 = X_2017['sI1_jun'].reshape(N_2017,1)
+sI1_jul_2017 = X_2017['sI1_jul'].reshape(N_2017,1)
+
+s_apr_2017 = X_2017['s_apr'].reshape(N_2017,1)
+s_may_2017 = X_2017['s_may'].reshape(N_2017,1)
+s_jun_2017 = X_2017['s_jun'].reshape(N_2017,1)
+s_jul_2017 = X_2017['s_jul'].reshape(N_2017,1)
+
+N = N_2014 + N_2015 + N_2016 + N_2017
+
+
+# Concatenate data for all years for the auto-infection component
+y_may = np.vstack((y_may_2014, y_may_2015, y_may_2016, y_may_2017))
+y_jun = np.vstack((y_jun_2014, y_jun_2015, y_jun_2016, y_jun_2017))
+y_jul = np.vstack((y_jul_2014, y_jul_2015, y_jul_2016, y_jul_2017))
+
+n_may = np.vstack((n_may_2014, n_may_2015, n_may_2016, n_may_2017))
+n_jun = np.vstack((n_jun_2014, n_jun_2015, n_jun_2016, n_jun_2017))
+n_jul = np.vstack((n_jul_2014, n_jul_2015, n_jul_2016, n_jul_2017))
+
+s_may = np.vstack((s_may_2014, s_may_2015, s_may_2016, s_may_2017))
+s_jun = np.vstack((s_jun_2014, s_jun_2015, s_jun_2016, s_jun_2017))
+s_jul = np.vstack((s_jul_2014, s_jul_2015, s_jul_2016, s_jul_2017))
+
+tI1_all = np.vstack((tI1_2014, tI1_2015, tI1_2016, tI1_2017))
+tI2_all = np.vstack((tI2_2014, tI2_2015, tI2_2016, tI2_2017))
+
+
+
+
+# Function to normalize the data
+def norm(x):
+    
+    return (x - np.min(x)) / (np.max(x) - np.min(x))
+
+# Normalize the data
+# dist_2014 = norm(dist_2014)
+# dist_2015 = norm(dist_2015)
+# dist_2016 = norm(dist_2016)
+# dist_2017 = norm(dist_2017)
+
+# a_apr_2014 = norm(a_apr_2014)
+# a_may_2014 = norm(a_may_2014)
+# a_jun_2014 = norm(a_jun_2014)
+# a_jul_2014 = norm(a_jul_2014)
+
+# a_apr_2015 = norm(a_apr_2015)
+# a_may_2015 = norm(a_may_2015)
+# a_jun_2015 = norm(a_jun_2015)
+# a_jul_2015 = norm(a_jul_2015)
+
+# a_apr_2016 = norm(a_apr_2016)
+# a_may_2016 = norm(a_may_2016)
+# a_jun_2016 = norm(a_jun_2016)
+# a_jul_2016 = norm(a_jul_2016)
+
+# a_apr_2017 = norm(a_apr_2017)
+# a_may_2017 = norm(a_may_2017)
+# a_jun_2017 = norm(a_jun_2017)
+# a_jul_2017 = norm(a_jul_2017)
+
+# w_apr_2014 = norm(w_apr_2014)
+# w_may_2014 = norm(w_may_2014)
+# w_jun_2014 = norm(w_jun_2014)
+# w_jul_2014 = norm(w_jul_2014)
+
+# w_apr_2015 = norm(w_apr_2015)
+# w_may_2015 = norm(w_may_2015)
+# w_jun_2015 = norm(w_jun_2015)
+# w_jul_2015 = norm(w_jul_2015)
+
+# w_apr_2016 = norm(w_apr_2016)
+# w_may_2016 = norm(w_may_2016)
+# w_jun_2016 = norm(w_jun_2016)
+# w_jul_2016 = norm(w_jul_2016)
+
+# w_apr_2017 = norm(w_apr_2017)
+# w_may_2017 = norm(w_may_2017)
+# w_jun_2017 = norm(w_jun_2017)
+# w_jul_2017 = norm(w_jul_2017)
+
+
+
+for period in period:
+
+    if period == 'may-jun':
+        
+        y = y_jun
+        n = n_jun
+        
+        y_lag = y_may
+        n_lag = n_may
+        
+        a_lag_2014 = a_may_2014
+        a_lag_2015 = a_may_2015
+        a_lag_2016 = a_may_2016
+        a_lag_2017 = a_may_2017
+        
+        w_lag_2014 = w_may_2014
+        w_lag_2015 = w_may_2015
+        w_lag_2016 = w_may_2016
+        w_lag_2017 = w_may_2017
+        
+        sI1_lag_2014 = sI1_may_2014
+        sI1_lag_2015 = sI1_may_2015
+        sI1_lag_2016 = sI1_may_2016
+        sI1_lag_2017 = sI1_may_2017
+        
+        s_lag = s_may
+        
+        z_lag_2014 = y_may_2014
+        z_lag_2015 = y_may_2015
+        z_lag_2016 = y_may_2016
+        z_lag_2017 = y_may_2017
+        
+        nz_lag_2014 = n_may_2014
+        nz_lag_2015 = n_may_2015
+        nz_lag_2016 = n_may_2016
+        nz_lag_2017 = n_may_2017
+        
+        sz_lag_2014 = s_may_2014
+        sz_lag_2015 = s_may_2015
+        sz_lag_2016 = s_may_2016
+        sz_lag_2017 = s_may_2017
+        
+        
+    elif period == 'jun-jul':
+        
+        y = y_jul
+        n = n_jul
+        
+        y_lag = y_jun
+        n_lag = n_jun
+        
+        a_lag_2014 = a_jun_2014
+        a_lag_2015 = a_jun_2015
+        a_lag_2016 = a_jun_2016
+        a_lag_2017 = a_jun_2017
+        
+        w_lag_2014 = w_jun_2014
+        w_lag_2015 = w_jun_2015
+        w_lag_2016 = w_jun_2016
+        w_lag_2017 = w_jun_2017
+        
+        sI1_lag_2014 = sI1_jun_2014
+        sI1_lag_2015 = sI1_jun_2015
+        sI1_lag_2016 = sI1_jun_2016
+        sI1_lag_2017 = sI1_jun_2017
+        
+        s_lag = s_jun
+        
+        z_lag_2014 = y_jun_2014
+        z_lag_2015 = y_jun_2015
+        z_lag_2016 = y_jun_2016
+        z_lag_2017 = y_jun_2017
+        
+        nz_lag_2014 = n_jun_2014
+        nz_lag_2015 = n_jun_2015
+        nz_lag_2016 = n_jun_2016
+        nz_lag_2017 = n_jun_2017
+        
+        sz_lag_2014 = s_jun_2014
+        sz_lag_2015 = s_jun_2015
+        sz_lag_2016 = s_jun_2016
+        sz_lag_2017 = s_jun_2017
+
+
+
+
+
+    # Define the function eta() which takes input parameters theta and returns the log-odds of disease for each yard i in current time period
+    def eta(theta):
+            
+        beta1, beta2, delta1, delta2, gamma1, gamma2, alpha1, alpha2, eta11, eta12, eta21, eta22 = theta
+        
+        beta1_array = np.full((N,1), beta1)
+        beta2_array = np.full((N,1), beta2)
+        
+        auto_infection1 = delta1 * (y_lag / n_lag) * np.exp(-eta11 * s_lag)
+        auto_infection2 = delta2 * (y_lag / n_lag) * np.exp(-eta12 * s_lag)
+        
+        dispersal1 = []
+        dispersal2 = []
+        
+        for year in [2014, 2015, 2016, 2017]:
+            
+            if year == 2014:
+                dist = dist_2014
+                sI2 = sI2_2014
+                z_lag = z_lag_2014
+                nz_lag = nz_lag_2014
+                sz_lag = sz_lag_2014
+                a_lag = a_lag_2014
+                w_lag = w_lag_2014
+                sI1_lag = sI1_lag_2014
+                Nz = N_2014
+                tI1 = tI1_2014
+                tI2 = tI2_2014
+                
+            elif year == 2015:
+                dist = dist_2015
+                sI2 = sI2_2015
+                z_lag = z_lag_2015
+                nz_lag = nz_lag_2015
+                sz_lag = sz_lag_2015
+                a_lag = a_lag_2015
+                w_lag = w_lag_2015
+                sI1_lag = sI1_lag_2015
+                Nz = N_2015
+                tI1 = tI1_2015
+                tI2 = tI2_2015
+            
+            elif year == 2016:
+                dist = dist_2016
+                sI2 = sI2_2016
+                z_lag = z_lag_2016
+                nz_lag = nz_lag_2016
+                sz_lag = sz_lag_2016
+                a_lag = a_lag_2016
+                w_lag = w_lag_2016
+                sI1_lag = sI1_lag_2016
+                Nz = N_2016
+                tI1 = tI1_2016
+                tI2 = tI2_2016
+                
+            elif year == 2017:
+                dist = dist_2017
+                sI2 = sI2_2017
+                z_lag = z_lag_2017
+                nz_lag = nz_lag_2017
+                sz_lag = sz_lag_2017
+                a_lag = a_lag_2017
+                w_lag = w_lag_2017
+                sI1_lag = sI1_lag_2017
+                Nz = N_2017
+                tI1 = tI1_2017
+                tI2 = tI2_2017
+            
+            for j in range(0, Nz):
+                
+                dispersal_array = ((a_lag * (z_lag / nz_lag)) * (w_lag[:, j].reshape(Nz,1)))
+                dispersal_array1 = dispersal_array * np.exp(-eta21 * sz_lag) * np.power(1 + dist[:, j].reshape(Nz,1), -alpha1) * sI1_lag
+                dispersal_array2 = dispersal_array * np.exp(-eta22 * sz_lag) * np.power(1 + dist[:, j].reshape(Nz,1), -alpha2) * sI2
+                dispersal_component1_i = gamma1 * (np.sum(dispersal_array1) - dispersal_array1[j][0])
+                dispersal_component2_i = gamma2 * (np.sum(dispersal_array2) - dispersal_array2[j][0])
+            
+                dispersal1.append(dispersal_component1_i)
+                dispersal2.append(dispersal_component2_i)
+        
+        dispersal1 = np.array(dispersal1).reshape(N,1)
+        dispersal2 = np.array(dispersal2).reshape(N,1)
+    
+        eta = tI1_all * (beta1_array + auto_infection1 + dispersal1) + tI2_all * (beta2_array + auto_infection2 + dispersal2)
+        
+        return eta
+
+
+    def costFunction(theta): 
+        
+        neg_log_likelihood = -(1/N) * np.sum(y * eta(theta) - n * np.log(1 + np.exp(eta(theta))))
+
+        return neg_log_likelihood
+    
+    
+
+    def partial(theta):
+        
+        beta1, beta2, delta1, delta2, gamma1, gamma2, alpha1, alpha2, eta11, eta12, eta21, eta22 = theta
+        
+        d_beta1 = tI1_all
+        d_beta2 = tI2_all
+        
+        d_delta1 = tI1_all * (y_lag / n_lag) * np.exp(-eta11 * s_lag)
+        d_delta2 = tI2_all * (y_lag / n_lag) * np.exp(-eta12 * s_lag)
+        
+        d_gamma1 = []
+        d_gamma2 = []
+        d_alpha1 = []
+        d_alpha2 = []
+        d_eta21 = []
+        d_eta22 = []
+        
+        for year in [2014, 2015, 2016, 2017]:
+            
+            if year == 2014:
+                dist = dist_2014
+                sI2 = sI2_2014
+                z_lag = z_lag_2014
+                nz_lag = nz_lag_2014
+                sz_lag = sz_lag_2014
+                a_lag = a_lag_2014
+                w_lag = w_lag_2014
+                sI1_lag = sI1_lag_2014
+                Nz = N_2014
+                tI1 = tI1_2014
+                tI2 = tI2_2014
+                
+            elif year == 2015:
+                dist = dist_2015
+                sI2 = sI2_2015
+                z_lag = z_lag_2015
+                nz_lag = nz_lag_2015
+                sz_lag = sz_lag_2015
+                a_lag = a_lag_2015
+                w_lag = w_lag_2015
+                sI1_lag = sI1_lag_2015
+                Nz = N_2015
+                tI1 = tI1_2015
+                tI2 = tI2_2015
+            
+            elif year == 2016:
+                dist = dist_2016
+                sI2 = sI2_2016
+                z_lag = z_lag_2016
+                nz_lag = nz_lag_2016
+                sz_lag = sz_lag_2016
+                a_lag = a_lag_2016
+                w_lag = w_lag_2016
+                sI1_lag = sI1_lag_2016
+                Nz = N_2016
+                tI1 = tI1_2016
+                tI2 = tI2_2016
+                
+            elif year == 2017:
+                dist = dist_2017
+                sI2 = sI2_2017
+                z_lag = z_lag_2017
+                nz_lag = nz_lag_2017
+                sz_lag = sz_lag_2017
+                a_lag = a_lag_2017
+                w_lag = w_lag_2017
+                sI1_lag = sI1_lag_2017
+                Nz = N_2017
+                tI1 = tI1_2017
+                tI2 = tI2_2017
+            
+            for i in range(0, Nz):
+            
+                mask = np.arange(Nz) != i # mask out the current yard i
+            
+                d_gamma1_i = tI1[i] * np.sum((a_lag[mask] * (z_lag[mask] / nz_lag[mask])) * np.exp(-eta21 * sz_lag[mask]) * (w_lag[:, i][mask].reshape(Nz-1, 1) * np.power(1 + dist[:, i][mask].reshape(Nz-1, 1), -alpha1)) * sI1_lag[mask])
+                d_gamma2_i = tI2[i] * np.sum((a_lag[mask] * (z_lag[mask] / nz_lag[mask])) * np.exp(-eta22 * sz_lag[mask]) * (w_lag[:, i][mask].reshape(Nz-1, 1) * np.power(1 + dist[:, i][mask].reshape(Nz-1, 1), -alpha2)) * sI2[mask])
+                
+                d_alpha1_i = gamma1 * tI1[i] * np.sum((a_lag[mask] * (z_lag[mask] / nz_lag[mask])) * np.exp(-eta21 * sz_lag[mask]) * (w_lag[:, i][mask].reshape(Nz-1, 1) * -np.power(1 + dist[:, i][mask].reshape(Nz-1, 1), -alpha1) * np.log(1 + dist[:, i][mask].reshape(Nz-1, 1))) * sI1_lag[mask])
+                d_alpha2_i = gamma2 * tI2[i] * np.sum((a_lag[mask] * (z_lag[mask] / nz_lag[mask])) * np.exp(-eta22 * sz_lag[mask]) * (w_lag[:, i][mask].reshape(Nz-1, 1) * -np.power(1 + dist[:, i][mask].reshape(Nz-1, 1), -alpha2) * np.log(1 + dist[:, i][mask].reshape(Nz-1, 1))) * sI2[mask])
+                
+                d_eta21_i = -gamma1 * tI1[i] * np.sum((a_lag[mask] * (z_lag[mask] / nz_lag[mask])) * np.exp(-eta21 * sz_lag[mask]) * (w_lag[:, i][mask].reshape(Nz-1, 1) * np.power(1 + dist[:, i][mask].reshape(Nz-1, 1), -alpha1)) * sI1_lag[mask] * sz_lag[mask])
+                d_eta22_i = -gamma2 * tI2[i] * np.sum((a_lag[mask] * (z_lag[mask] / nz_lag[mask])) * np.exp(-eta22 * sz_lag[mask]) * (w_lag[:, i][mask].reshape(Nz-1, 1) * np.power(1 + dist[:, i][mask].reshape(Nz-1, 1), -alpha2)) * sI2[mask] * sz_lag[mask])
+            
+                d_gamma1.append(d_gamma1_i)
+                d_gamma2.append(d_gamma2_i)
+                d_alpha1.append(d_alpha1_i)
+                d_alpha2.append(d_alpha2_i)
+                d_eta21.append(d_eta21_i)
+                d_eta22.append(d_eta22_i)
+        
+        d_gamma1 = np.array(d_gamma1).reshape(N,1)
+        d_gamma2 = np.array(d_gamma2).reshape(N,1)
+        d_alpha1 = np.array(d_alpha1).reshape(N,1)
+        d_alpha2 = np.array(d_alpha2).reshape(N,1)
+        d_eta21 = np.array(d_eta21).reshape(N,1)
+        d_eta22 = np.array(d_eta22).reshape(N,1)
+        
+        
+        d_eta11 = -tI1_all * delta1 * s_lag * (y_lag / n_lag) * np.exp(-eta11 * s_lag)
+        d_eta12 = -tI2_all * delta2 * s_lag * (y_lag / n_lag) * np.exp(-eta12 * s_lag)
+
+
+
+        grad_entries = np.array([d_beta1, d_beta2, d_delta1, d_delta2, d_gamma1, d_gamma2, d_alpha1, d_alpha2, d_eta11, d_eta12, d_eta21, d_eta22])
+        
+        return grad_entries
+
+
+
+
+    def partial_by_partial(theta):
+        
+        beta1, beta2, delta1, delta2, gamma1, gamma2, alpha1, alpha2, eta11, eta12, eta21, eta22 = theta
+        
+        d_beta1 = tI1_all
+        d_beta2 = tI2_all
+        
+        d_delta1 = tI1_all * (y_lag / n_lag) * np.exp(-eta11 * s_lag)
+        d_delta2 = tI2_all* (y_lag / n_lag) * np.exp(-eta12 * s_lag)
+        
+        d_eta11 = -tI1_all * delta1 * s_lag * (y_lag / n_lag) * np.exp(-eta11 * s_lag)
+        d_eta12 = -tI2_all * delta2 * s_lag * (y_lag / n_lag) * np.exp(-eta12 * s_lag)
+        
+        d_gamma1 = []
+        d_gamma2 = []
+        d_alpha1 = []
+        d_alpha2 = []
+        d_eta21 = []
+        d_eta22 = []
+        
+        for year in [2014, 2015, 2016, 2017]:
+            
+            if year == 2014:
+                dist = dist_2014
+                sI2 = sI2_2014
+                z_lag = z_lag_2014
+                nz_lag = nz_lag_2014
+                sz_lag = sz_lag_2014
+                a_lag = a_lag_2014
+                w_lag = w_lag_2014
+                sI1_lag = sI1_lag_2014
+                Nz = N_2014
+                tI1 = tI1_2014
+                tI2 = tI2_2014
+                
+            elif year == 2015:
+                dist = dist_2015
+                sI2 = sI2_2015
+                z_lag = z_lag_2015
+                nz_lag = nz_lag_2015
+                sz_lag = sz_lag_2015
+                a_lag = a_lag_2015
+                w_lag = w_lag_2015
+                sI1_lag = sI1_lag_2015
+                Nz = N_2015
+                tI1 = tI1_2015
+                tI2 = tI2_2015
+            
+            elif year == 2016:
+                dist = dist_2016
+                sI2 = sI2_2016
+                z_lag = z_lag_2016
+                nz_lag = nz_lag_2016
+                sz_lag = sz_lag_2016
+                a_lag = a_lag_2016
+                w_lag = w_lag_2016
+                sI1_lag = sI1_lag_2016
+                Nz = N_2016
+                tI1 = tI1_2016
+                tI2 = tI2_2016
+                
+            elif year == 2017:
+                dist = dist_2017
+                sI2 = sI2_2017
+                z_lag = z_lag_2017
+                nz_lag = nz_lag_2017
+                sz_lag = sz_lag_2017
+                a_lag = a_lag_2017
+                w_lag = w_lag_2017
+                sI1_lag = sI1_lag_2017
+                Nz = N_2017
+                tI1 = tI1_2017
+                tI2 = tI2_2017
+            
+            for i in range(0, Nz):
+            
+                mask = np.arange(Nz) != i # mask out the current yard i
+            
+                d_gamma1_i = tI1[i] * np.sum((a_lag[mask] * (z_lag[mask] / nz_lag[mask])) * np.exp(-eta21 * sz_lag[mask]) * (w_lag[:, i][mask].reshape(Nz-1, 1) * np.power(1 + dist[:, i][mask].reshape(Nz-1, 1), -alpha1)) * sI1_lag[mask])
+                d_gamma2_i = tI2[i] * np.sum((a_lag[mask] * (z_lag[mask] / nz_lag[mask])) * np.exp(-eta22 * sz_lag[mask]) * (w_lag[:, i][mask].reshape(Nz-1, 1) * np.power(1 + dist[:, i][mask].reshape(Nz-1, 1), -alpha2)) * sI2[mask])
+                
+                d_alpha1_i = gamma1 * tI1[i] * np.sum((a_lag[mask] * (z_lag[mask] / nz_lag[mask])) * np.exp(-eta21 * sz_lag[mask]) * (w_lag[:, i][mask].reshape(Nz-1, 1) * -np.power(1 + dist[:, i][mask].reshape(Nz-1, 1), -alpha1) * np.log(1 + dist[:, i][mask].reshape(Nz-1, 1))) * sI1_lag[mask])
+                d_alpha2_i = gamma2 * tI2[i] * np.sum((a_lag[mask] * (z_lag[mask] / nz_lag[mask])) * np.exp(-eta22 * sz_lag[mask]) * (w_lag[:, i][mask].reshape(Nz-1, 1) * -np.power(1 + dist[:, i][mask].reshape(Nz-1, 1), -alpha2) * np.log(1 + dist[:, i][mask].reshape(Nz-1, 1))) * sI2[mask])
+
+                d_eta21_i = -gamma1 * tI1[i] * np.sum((a_lag[mask] * (z_lag[mask] / nz_lag[mask])) * np.exp(-eta21 * sz_lag[mask]) * (w_lag[:, i][mask].reshape(Nz-1, 1) * np.power(1 + dist[:, i][mask].reshape(Nz-1, 1), -alpha1)) * sI1_lag[mask] * sz_lag[mask])
+                d_eta22_i = -gamma2 * tI2[i] * np.sum((a_lag[mask] * (z_lag[mask] / nz_lag[mask])) * np.exp(-eta22 * sz_lag[mask]) * (w_lag[:, i][mask].reshape(Nz-1, 1) * np.power(1 + dist[:, i][mask].reshape(Nz-1, 1), -alpha2)) * sI2[mask] * sz_lag[mask])
+                
+                d_gamma1.append(d_gamma1_i)
+                d_gamma2.append(d_gamma2_i)
+                d_alpha1.append(d_alpha1_i)
+                d_alpha2.append(d_alpha2_i)
+                d_eta21.append(d_eta21_i)
+                d_eta22.append(d_eta22_i)
+        
+        d_gamma1 = np.array(d_gamma1).reshape(N,1)
+        d_gamma2 = np.array(d_gamma2).reshape(N,1)
+        d_alpha1 = np.array(d_alpha1).reshape(N,1)
+        d_alpha2 = np.array(d_alpha2).reshape(N,1)
+        d_eta21 = np.array(d_eta21).reshape(N,1)
+        d_eta22 = np.array(d_eta22).reshape(N,1)
+            
+
+        grad_entries = np.array([[d_beta1*d_beta1, d_beta2*d_beta1, d_delta1*d_beta1, d_delta2*d_beta1, d_gamma1*d_beta1, d_gamma2*d_beta1, d_alpha1*d_beta1, d_alpha2*d_beta1, d_eta11*d_beta1, d_eta12*d_beta1, d_eta21*d_beta1, d_eta22*d_beta1],
+                                [d_beta1*d_beta2, d_beta2*d_beta2, d_delta1*d_beta2, d_delta2*d_beta2, d_gamma1*d_beta2, d_gamma2*d_beta2, d_alpha1*d_beta2, d_alpha2*d_beta2, d_eta11*d_beta2, d_eta12*d_beta2, d_eta21*d_beta2, d_eta22*d_beta2],
+                                [d_beta1*d_delta1, d_beta2*d_delta1, d_delta1*d_delta1, d_delta2*d_delta1, d_gamma1*d_delta1, d_gamma2*d_delta1, d_alpha1*d_delta1, d_alpha2*d_delta1, d_eta11*d_delta1, d_eta12*d_delta1, d_eta21*d_delta1, d_eta22*d_delta1],
+                                [d_beta1*d_delta2, d_beta2*d_delta2, d_delta1*d_delta2, d_delta2*d_delta2, d_gamma1*d_delta2, d_gamma2*d_delta2, d_alpha1*d_delta2, d_alpha2*d_delta2, d_eta11*d_delta2, d_eta12*d_delta2, d_eta21*d_delta2, d_eta22*d_delta2],
+                                [d_beta1*d_gamma1, d_beta2*d_gamma1, d_delta1*d_gamma1, d_delta2*d_gamma1, d_gamma1*d_gamma1, d_gamma2*d_gamma1, d_alpha1*d_gamma1, d_alpha2*d_gamma1, d_eta11*d_gamma1, d_eta12*d_gamma1, d_eta21*d_gamma1, d_eta22*d_gamma1],
+                                [d_beta1*d_gamma2, d_beta2*d_gamma2, d_delta1*d_gamma2, d_delta2*d_gamma2, d_gamma1*d_gamma2, d_gamma2*d_gamma2, d_alpha1*d_gamma2, d_alpha2*d_gamma2, d_eta11*d_gamma2, d_eta12*d_gamma2, d_eta21*d_gamma2, d_eta22*d_gamma2],
+                                [d_beta1*d_alpha1, d_beta2*d_alpha1, d_delta1*d_alpha1, d_delta2*d_alpha1, d_gamma1*d_alpha1, d_gamma2*d_alpha1, d_alpha1*d_alpha1, d_alpha2*d_alpha1, d_eta11*d_alpha1, d_eta12*d_alpha1, d_eta21*d_alpha1, d_eta22*d_alpha1],
+                                [d_beta1*d_alpha2, d_beta2*d_alpha2, d_delta1*d_alpha2, d_delta2*d_alpha2, d_gamma1*d_alpha2, d_gamma2*d_alpha2, d_alpha1*d_alpha2, d_alpha2*d_alpha2, d_eta11*d_alpha2, d_eta12*d_alpha2, d_eta21*d_alpha2, d_eta22*d_alpha2],
+                                [d_beta1*d_eta11, d_beta2*d_eta11, d_delta1*d_eta11, d_delta2*d_eta11, d_gamma1*d_eta11, d_gamma2*d_eta11, d_alpha1*d_eta11, d_alpha2*d_eta11, d_eta11*d_eta11, d_eta12*d_eta11, d_eta21*d_eta11, d_eta22*d_eta11],
+                                [d_beta1*d_eta12, d_beta2*d_eta12, d_delta1*d_eta12, d_delta2*d_eta12, d_gamma1*d_eta12, d_gamma2*d_eta12, d_alpha1*d_eta12, d_alpha2*d_eta12, d_eta11*d_eta12, d_eta12*d_eta12, d_eta21*d_eta12, d_eta22*d_eta12],
+                                [d_beta1*d_eta21, d_beta2*d_eta21, d_delta1*d_eta21, d_delta2*d_eta21, d_gamma1*d_eta21, d_gamma2*d_eta21, d_alpha1*d_eta21, d_alpha2*d_eta21, d_eta11*d_eta21, d_eta12*d_eta21, d_eta21*d_eta21, d_eta22*d_eta21],
+                                [d_beta1*d_eta22, d_beta2*d_eta22, d_delta1*d_eta22, d_delta2*d_eta22, d_gamma1*d_eta22, d_gamma2*d_eta22, d_alpha1*d_eta22, d_alpha2*d_eta22, d_eta11*d_eta22, d_eta12*d_eta22, d_eta21*d_eta22, d_eta22*d_eta22]])
+        
+        
+        
+        return grad_entries
+
+    def partial_sq(theta):
+        
+        beta1, beta2, delta1, delta2, gamma1, gamma2, alpha1, alpha2, eta11, eta12, eta21, eta22 = theta
+        
+        # delta1 second derivatives
+        
+        d_delta1_d_eta11 = -tI1_all * (y_lag / n_lag) * np.exp(-eta11 * s_lag) * s_lag
+        d_delta1_d_eta12 = 0
+        d_delta2_d_eta11 = 0
+        d_delta2_d_eta12 = -tI2_all * (y_lag / n_lag) * np.exp(-eta12 * s_lag) * s_lag
+        d_gamma1_d_eta22 = 0
+        d_gamma1_d_alpha2 = 0
+        d_gamma2_d_eta21 = 0
+        d_gamma2_d_alpha1 = 0
+        d_alpha1_d_gamma2 = 0
+        d_alpha1_d_eta22 = 0
+        d_alpha1_d_alpha2 = 0
+        d_alpha2_d_gamma1 = 0
+        d_alpha2_d_eta21 = 0
+        d_alpha2_d_alpha1 = 0
+        d_eta11_d_delta1 = -tI1_all * s_lag * (y_lag / n_lag) * np.exp(-eta11 * s_lag)
+        d_eta11_d_delta2 = 0
+        d_eta11_d_eta11 = tI1_all * delta1 * (s_lag**2) * (y_lag / n_lag) * np.exp(-eta11 * s_lag)
+        d_eta11_d_eta12 = 0
+        d_eta12_d_delta1 = 0
+        d_eta12_d_delta2 = -tI2_all * s_lag * (y_lag / n_lag) * np.exp(-eta12 * s_lag)
+        d_eta12_d_eta11 = 0
+        d_eta12_d_eta12 = tI2_all * delta2 * (s_lag**2) * (y_lag / n_lag) * np.exp(-eta12 * s_lag)
+        d_eta21_d_gamma2 = 0
+        d_eta21_d_eta22 = 0
+        d_eta21_d_alpha2 = 0
+        d_eta22_d_gamma1 = 0
+        d_eta22_d_eta21 = 0
+        d_eta22_d_alpha1 = 0
+        
+        # summations
+        
+        d_gamma1_d_eta21 = []
+        d_gamma1_d_alpha1 = []
+        d_gamma2_d_eta22 = []
+        d_gamma2_d_alpha2 = []
+        d_alpha1_d_gamma1 = []
+        d_alpha1_d_eta21 = []
+        d_alpha1_d_alpha1 = []
+        d_alpha2_d_gamma2 = []
+        d_alpha2_d_eta22 = []
+        d_alpha2_d_alpha2 = []
+        d_eta21_d_gamma1 = []
+        d_eta21_d_eta21 = []
+        d_eta21_d_alpha1 = []
+        d_eta22_d_gamma2 = []
+        d_eta22_d_eta22 = []
+        d_eta22_d_alpha2 = []
+        
+        
+        for year in [2014, 2015, 2016, 2017]:
+        
+            if year == 2014:
+                dist = dist_2014
+                sI2 = sI2_2014
+                z_lag = z_lag_2014
+                nz_lag = nz_lag_2014
+                sz_lag = sz_lag_2014
+                a_lag = a_lag_2014
+                w_lag = w_lag_2014
+                sI1_lag = sI1_lag_2014
+                Nz = N_2014
+                tI1 = tI1_2014
+                tI2 = tI2_2014
+                
+            elif year == 2015:
+                dist = dist_2015
+                sI2 = sI2_2015
+                z_lag = z_lag_2015
+                nz_lag = nz_lag_2015
+                sz_lag = sz_lag_2015
+                a_lag = a_lag_2015
+                w_lag = w_lag_2015
+                sI1_lag = sI1_lag_2015
+                Nz = N_2015
+                tI1 = tI1_2015
+                tI2 = tI2_2015
+            
+            elif year == 2016:
+                dist = dist_2016
+                sI2 = sI2_2016
+                z_lag = z_lag_2016
+                nz_lag = nz_lag_2016
+                sz_lag = sz_lag_2016
+                a_lag = a_lag_2016
+                w_lag = w_lag_2016
+                sI1_lag = sI1_lag_2016
+                Nz = N_2016
+                tI1 = tI1_2016
+                tI2 = tI2_2016
+                
+            elif year == 2017:
+                dist = dist_2017
+                sI2 = sI2_2017
+                z_lag = z_lag_2017
+                nz_lag = nz_lag_2017
+                sz_lag = sz_lag_2017
+                a_lag = a_lag_2017
+                w_lag = w_lag_2017
+                sI1_lag = sI1_lag_2017
+                Nz = N_2017
+                tI1 = tI1_2017
+                tI2 = tI2_2017
+            
+            for i in range(0, Nz):
+                
+                mask = np.arange(Nz) != i # mask out the current yard i
+                
+                d_gamma1_d_eta21_i = -tI1[i] * np.sum((a_lag[mask] * (z_lag[mask] / nz_lag[mask])) * np.exp(-eta21 * sz_lag[mask]) * (w_lag[:, i][mask].reshape(Nz-1, 1) * np.power(1 + dist[:, i][mask].reshape(Nz-1, 1), -alpha1)) * sI1_lag[mask] * sz_lag[mask])
+                d_gamma1_d_alpha1_i = tI1[i] * np.sum((a_lag[mask] * (z_lag[mask] / nz_lag[mask])) * np.exp(-eta21 * sz_lag[mask]) * (w_lag[:, i][mask].reshape(Nz-1, 1) * -np.power(1 + dist[:, i][mask].reshape(Nz-1, 1), -alpha1) * np.log(1 + dist[:, i][mask].reshape(Nz-1, 1))) * sI1_lag[mask])
+                d_gamma2_d_eta22_i = -tI2[i] * np.sum((a_lag[mask] * (z_lag[mask] / nz_lag[mask])) * np.exp(-eta22 * sz_lag[mask]) * (w_lag[:, i][mask].reshape(Nz-1, 1) * np.power(1 + dist[:, i][mask].reshape(Nz-1, 1), -alpha2)) * sI2[mask] * sz_lag[mask])
+                d_gamma2_d_alpha2_i = tI2[i] * np.sum((a_lag[mask] * (z_lag[mask] / nz_lag[mask])) * np.exp(-eta22 * sz_lag[mask]) * (w_lag[:, i][mask].reshape(Nz-1, 1) * -np.power(1 + dist[:, i][mask].reshape(Nz-1, 1), -alpha2) * np.log(1 + dist[:, i][mask].reshape(Nz-1, 1))) * sI2[mask])
+                d_alpha1_d_gamma1_i = tI1[i] * np.sum((a_lag[mask] * (z_lag[mask] / nz_lag[mask])) * np.exp(-eta21 * sz_lag[mask]) * (w_lag[:, i][mask].reshape(Nz-1, 1) * -np.power(1 + dist[:, i][mask].reshape(Nz-1, 1), -alpha1) * np.log(1 + dist[:, i][mask].reshape(Nz-1, 1))) * sI1_lag[mask])
+                d_alpha1_d_eta21_i = -gamma1 * tI1[i] * np.sum((a_lag[mask] * (z_lag[mask] / nz_lag[mask])) * np.exp(-eta21 * sz_lag[mask]) * (w_lag[:, i][mask].reshape(Nz-1, 1) * -np.power(1 + dist[:, i][mask].reshape(Nz-1, 1), -alpha1) * np.log(1 + dist[:, i][mask].reshape(Nz-1, 1))) * sI1_lag[mask] * sz_lag[mask])
+                d_alpha1_d_alpha1_i = gamma1 * tI1[i] * np.sum((a_lag[mask] * (z_lag[mask] / nz_lag[mask])) * np.exp(-eta21 * sz_lag[mask]) * (w_lag[:, i][mask].reshape(Nz-1, 1) * np.power(1 + dist[:, i][mask].reshape(Nz-1, 1), -alpha1) * (np.log(1 + dist[:, i][mask].reshape(Nz-1, 1)))**2) * sI1_lag[mask])
+                d_alpha2_d_gamma2_i = tI2[i] * np.sum((a_lag[mask] * (z_lag[mask] / nz_lag[mask])) * np.exp(-eta22 * sz_lag[mask]) * (w_lag[:, i][mask].reshape(Nz-1, 1) * -np.power(1 + dist[:, i][mask].reshape(Nz-1, 1), -alpha2) * np.log(1 + dist[:, i][mask].reshape(Nz-1, 1))) * sI2[mask])
+                d_alpha2_d_eta22_i = -gamma2 * tI2[i] * np.sum((a_lag[mask] * (z_lag[mask] / nz_lag[mask])) * np.exp(-eta22 * sz_lag[mask]) * (w_lag[:, i][mask].reshape(Nz-1, 1) * -np.power(1 + dist[:, i][mask].reshape(Nz-1, 1), -alpha2) * np.log(1 + dist[:, i][mask].reshape(Nz-1, 1))) * sI2[mask] * sz_lag[mask])
+                d_alpha2_d_alpha2_i = gamma2 * tI2[i] * np.sum((a_lag[mask] * (z_lag[mask] / nz_lag[mask])) * np.exp(-eta22 * sz_lag[mask]) * (w_lag[:, i][mask].reshape(Nz-1, 1) * np.power(1 + dist[:, i][mask].reshape(Nz-1, 1), -alpha2) * (np.log(1 + dist[:, i][mask].reshape(Nz-1, 1)))**2) * sI2[mask])
+                d_eta21_d_gamma1_i = -tI1[i] * np.sum((a_lag[mask] * (z_lag[mask] / nz_lag[mask])) * np.exp(-eta21 * sz_lag[mask]) * (w_lag[:, i][mask].reshape(Nz-1, 1) * np.power(1 + dist[:, i][mask].reshape(Nz-1, 1), -alpha1)) * sI1_lag[mask] * sz_lag[mask])
+                d_eta21_d_eta21_i = gamma1 * tI1[i] * np.sum((a_lag[mask] * (z_lag[mask] / nz_lag[mask])) * np.exp(-eta21 * sz_lag[mask]) * (w_lag[:, i][mask].reshape(Nz-1, 1) * np.power(1 + dist[:, i][mask].reshape(Nz-1, 1), -alpha1)) * sI1_lag[mask] * (sz_lag[mask]**2))
+                d_eta21_d_alpha1_i = -gamma1 * tI1[i] * np.sum((a_lag[mask] * (z_lag[mask] / nz_lag[mask])) * np.exp(-eta21 * sz_lag[mask]) * (w_lag[:, i][mask].reshape(Nz-1, 1) * -np.power(1 + dist[:, i][mask].reshape(Nz-1, 1), -alpha1) * np.log(1 + dist[:, i][mask].reshape(Nz-1, 1))) * sI1_lag[mask] * sz_lag[mask])
+                d_eta22_d_gamma2_i = -tI2[i] * np.sum((a_lag[mask] * (z_lag[mask] / nz_lag[mask])) * np.exp(-eta22 * sz_lag[mask]) * (w_lag[:, i][mask].reshape(Nz-1, 1) * np.power(1 + dist[:, i][mask].reshape(Nz-1, 1), -alpha2)) * sI2[mask] * sz_lag[mask])
+                d_eta22_d_eta22_i = gamma2 * tI2[i] * np.sum((a_lag[mask] * (z_lag[mask] / nz_lag[mask])) * np.exp(-eta22 * sz_lag[mask]) * (w_lag[:, i][mask].reshape(Nz-1, 1) * np.power(1 + dist[:, i][mask].reshape(Nz-1, 1), -alpha2)) * sI2[mask] * (sz_lag[mask]**2))
+                d_eta22_d_alpha2_i = -gamma2 * tI2[i] * np.sum((a_lag[mask] * (z_lag[mask] / nz_lag[mask])) * np.exp(-eta22 * sz_lag[mask]) * (w_lag[:, i][mask].reshape(Nz-1, 1) * -np.power(1 + dist[:, i][mask].reshape(Nz-1, 1), -alpha2) * np.log(1 + dist[:, i][mask].reshape(Nz-1, 1))) * sI2[mask] * sz_lag[mask])
+
+                d_gamma1_d_eta21.append(d_gamma1_d_eta21_i)
+                d_gamma1_d_alpha1.append(d_gamma1_d_alpha1_i)
+                d_gamma2_d_eta22.append(d_gamma2_d_eta22_i)
+                d_gamma2_d_alpha2.append(d_gamma2_d_alpha2_i)
+                d_alpha1_d_gamma1.append(d_alpha1_d_gamma1_i)
+                d_alpha1_d_eta21.append(d_alpha1_d_eta21_i)
+                d_alpha1_d_alpha1.append(d_alpha1_d_alpha1_i)
+                d_alpha2_d_gamma2.append(d_alpha2_d_gamma2_i)
+                d_alpha2_d_eta22.append(d_alpha2_d_eta22_i)
+                d_alpha2_d_alpha2.append(d_alpha2_d_alpha2_i)
+                d_eta21_d_gamma1.append(d_eta21_d_gamma1_i)
+                d_eta21_d_eta21.append(d_eta21_d_eta21_i)
+                d_eta21_d_alpha1.append(d_eta21_d_alpha1_i)
+                d_eta22_d_gamma2.append(d_eta22_d_gamma2_i)
+                d_eta22_d_eta22.append(d_eta22_d_eta22_i)
+                d_eta22_d_alpha2.append(d_eta22_d_alpha2_i)
+            
+        d_gamma1_d_eta21 = np.array(d_gamma1_d_eta21).reshape((N, 1))
+        d_gamma1_d_alpha1 = np.array(d_gamma1_d_alpha1).reshape((N, 1))
+        d_gamma2_d_eta22 = np.array(d_gamma2_d_eta22).reshape((N, 1))
+        d_gamma2_d_alpha2 = np.array(d_gamma2_d_alpha2).reshape((N, 1))
+        d_alpha1_d_gamma1 = np.array(d_alpha1_d_gamma1).reshape((N, 1))
+        d_alpha1_d_eta21 = np.array(d_alpha1_d_eta21).reshape((N, 1))
+        d_alpha1_d_alpha1 = np.array(d_alpha1_d_alpha1).reshape((N, 1))
+        d_alpha2_d_gamma2 = np.array(d_alpha2_d_gamma2).reshape((N, 1))
+        d_alpha2_d_eta22 = np.array(d_alpha2_d_eta22).reshape((N, 1))
+        d_alpha2_d_alpha2 = np.array(d_alpha2_d_alpha2).reshape((N, 1))
+        d_eta21_d_gamma1 = np.array(d_eta21_d_gamma1).reshape((N, 1))
+        d_eta21_d_eta21 = np.array(d_eta21_d_eta21).reshape((N, 1))
+        d_eta21_d_alpha1 = np.array(d_eta21_d_alpha1).reshape((N, 1))
+        d_eta22_d_gamma2 = np.array(d_eta22_d_gamma2).reshape((N, 1))
+        d_eta22_d_eta22 = np.array(d_eta22_d_eta22).reshape((N, 1))
+        d_eta22_d_alpha2 = np.array(d_eta22_d_alpha2).reshape((N, 1))
+            
+            
+        
+        zero = np.zeros((N, 1))
+        
+        hess_entries = np.array([[zero, zero, zero, zero, zero, zero, zero, zero, zero, zero, zero, zero],    #d_beta1
+                                [zero, zero, zero, zero, zero, zero, zero, zero, zero, zero, zero, zero],    #d_beta2
+                                [zero, zero, zero, zero, zero, zero, zero, zero, d_eta11_d_delta1, zero, zero, zero],    #d_delta1
+                                [zero, zero, zero, zero, zero, zero, zero, zero, zero, d_eta12_d_delta2, zero, zero],    #d_delta2
+                                [zero, zero, zero, zero, zero, zero, d_alpha1_d_gamma1, zero, zero, zero, d_eta21_d_gamma1, zero],    #d_gamma1
+                                [zero, zero, zero, zero, zero, zero, zero, d_alpha2_d_gamma2, zero, zero, zero, d_eta22_d_gamma2],    #d_gamma2
+                                [zero, zero, zero, zero, d_gamma1_d_alpha1, zero, d_alpha1_d_alpha1, zero, zero, zero, d_eta21_d_alpha1, zero],    #d_alpha1
+                                [zero, zero, zero, zero, zero, d_gamma2_d_alpha2, zero, d_alpha2_d_alpha2, zero, zero, zero, d_eta22_d_alpha2],    #d_alpha2
+                                [zero, zero, d_delta1_d_eta11, zero, zero, zero, zero, zero, d_eta11_d_eta11, zero, zero, zero],    #d_eta11
+                                [zero, zero, zero, d_delta2_d_eta12, zero, zero, zero, zero, zero, d_eta12_d_eta12, zero, zero],    #d_eta12
+                                [zero, zero, zero, zero, d_gamma1_d_eta21, zero, d_alpha1_d_eta21, zero, zero, zero, d_eta21_d_eta21, zero],    #d_eta21
+                                [zero, zero, zero, zero, zero, d_gamma2_d_eta22, zero, d_alpha2_d_eta22, zero, zero, zero, d_eta22_d_eta22]])   #d_eta22
+        
+        
+        return hess_entries
+
+
+
+    # Gradient entries
+    def gradient(theta):
+        
+        mu = y - (n / (1 + np.exp(-eta(theta))))
+        
+        # Gradient 
+        gradient = - (1 / N) * np.sum((partial(theta) * mu), axis=1)
+        
+        return gradient
+    
+    # Gradient entries
+    def gradient1(theta):
+        
+        mu = y - (n / (1 + np.exp(-eta(theta))))
+        
+        # Gradient 
+        gradient1 = - (1 / N) * np.sum((partial(theta) * mu), axis=1)
+        
+        return gradient1.ravel()
+
+
+    # Hessian
+    def hessian(theta):
+        
+        mu = y - (n / (1 + np.exp(-eta(theta))))
+        
+        # Hessian entries
+        hessian = - (1 / N) * np.sum((partial_sq(theta) * mu - n * (partial_by_partial(theta)) * (np.exp(-eta(theta)) / (1 + np.exp(-eta(theta)))**2)), axis=2)
+        hessian = hessian.reshape((12, 12))
+        
+        return hessian
+    
+
+    
+    
+    # Adam optimizer
+    def adam(theta, alpha, num_iters, tolerance, b_1=0.9, b_2=0.999, eps=1e-8, clip_norm=100.0):
+        theta = theta.copy()
+        J_history = []
+        m = np.zeros(theta.shape)
+        v = np.zeros(theta.shape)
+        
+        for i in range(num_iters):
+            
+            g = gradient(theta)
+
+            # Gradient clipping
+            g_norm = np.linalg.norm(g)
+            if g_norm > clip_norm:
+                g = (g / g_norm) * clip_norm
+            
+            m = b_1 * m + (1 - b_1) * g
+            v = b_2 * v + (1 - b_2) * g**2
+            mhat = m / (1 - b_1**(i+1))
+            vhat = v / (1 - b_2**(i+1))
+            
+            change = alpha * mhat / (np.sqrt(vhat) + eps)
+            theta = theta - change
+            
+            J_history.append(costFunction(theta))
+            
+            
+            
+            if i % 100 == 0:
+                
+                max_abs_grad = np.max(np.abs(g)) 
+                min_eig_hess = np.min(np.linalg.eigvalsh(hessian(theta)))
+                print('Period: ', period, '#', i , 'cost: ', np.round(costFunction(theta), 6), 'MaxGrad: ', max_abs_grad, 'MinEig: ', min_eig_hess, 'MaxTheta: ', np.argmax(np.abs(theta)), 'MaxThetaValue: ', np.round(np.max(np.abs(theta)),4), end='\r')
+                
+                if (max_abs_grad <= tolerance) and (min_eig_hess > 0):
+                    break
+            
+        return theta, J_history, g 
+    
+    
+    # Adam optimizer with step decay
+    def adam_with_decay(theta, initial_alpha, num_iters, decay_rate, decay_steps, tolerance, b_1=0.9, b_2=0.999, eps=1e-8, clip_norm=0.5):
+        theta = theta.copy()
+        J_history = []
+        m = np.zeros(theta.shape)
+        v = np.zeros(theta.shape)
+        alpha = initial_alpha
+
+        for i in range(num_iters):
+
+            # decay the learning rate every few steps
+            if i % decay_steps == 0 and i != 0:
+                alpha *= decay_rate
+
+            g = gradient(theta)
+
+            # Gradient clipping
+            g_norm = np.linalg.norm(g)
+            if g_norm > clip_norm:
+                g = (g / g_norm) * clip_norm
+
+            m = b_1 * m + (1 - b_1) * g
+            v = b_2 * v + (1 - b_2) * g**2
+            mhat = m / (1 - b_1**(i+1))
+            vhat = v / (1 - b_2**(i+1))
+
+            change = alpha * mhat / (np.sqrt(vhat) + eps)
+            theta = theta - change
+
+            J_history.append(costFunction(theta))
+
+            if i % 100 == 0:
+                max_abs_grad = np.max(np.abs(g)) 
+                min_eig_hess = np.min(np.linalg.eigvalsh(hessian(theta)))
+                print('Period: ', period, '#', i , 'cost: ', np.round(costFunction(theta), 6), 'MaxGrad: ', max_abs_grad, 'MinEig: ', min_eig_hess, 'MinThetaValue: ', np.round(np.min(theta), 2), 'MaxThetaValue: ', np.round(np.max(theta), 2), 'alpha: ', alpha, end='\n')
+                
+                if (period == 'may-jun'):
+                    
+                    np.save('C:/Users/jaeyoung.Hwang/Documents/theta_may-jun_power_oct25.npy', theta)
+
+                
+                elif (period == 'jun-jul'):
+                    
+                    np.save('C:/Users/jaeyoung.Hwang/Documents/theta_jun-jul_power_oct25.npy', theta)
+                
+                if (max_abs_grad <= tolerance) and (min_eig_hess > 1e-8):
+                    break
+
+        return theta, J_history, g
+
+
+    # Initialize the iteration counter
+    optimization_callback = 1
+   # optimization_callback.iteration = 1
+# Initialize fitting parameters
+theta = np.zeros((12,1))  # Create an array of zeros
+theta[2:] = np.random.normal(0, 100 / np.sqrt(N), size=(10, 1))  # Fill the rest with random numbers        
+    
+# NUMERICAL OPTIMIZATION
+from scipy.optimize import minimize
+from scipy.optimize import Bounds
+
+# Define the bounds for theta parameters
+# Indices for beta1 and beta2 are [0, 1], they should be between -100 and 100
+
+# Lower bounds (-inf for no bound)
+lower_bounds = np.full(theta.size, -np.inf)
+lower_bounds[2:] = 0.00001  # All parameters from delta to eta should be non-negative
+lower_bounds[:2] = -100  # lower bounds for beta1 and beta2
+
+# Upper bounds (inf for no bound)
+upper_bounds = np.full(theta.size, np.inf)
+upper_bounds[:2] = 100  # upper bounds for beta1 and beta2
+#upper_bounds[4] = 10000
+#upper_bounds[5] = 10000
+
+bounds = Bounds(lower_bounds, upper_bounds)  # apply bounds
+
+
+# # Define the regularization parameter
+# reg_lambda = 1e-14
+
+# # Regularized cost function
+# def costFunction_regularized(theta):
+#     regularization = reg_lambda * np.sum(theta[2:]**2)  # Regularize only the last 10 parameters
+#     return costFunction(theta) + regularization
+
+# # Regularized gradient
+# def gradient_regularized(theta):
+#     grad = gradient1(theta)
+#     grad[2:] += 2 * reg_lambda * theta[2:]  # Regularize only the last 10 parameters
+#     return grad
+
+# # Regularized Hessian
+# def hessian_regularized(theta):
+#     hess = hessian(theta)
+#     hess[2:, 2:] += 2 * reg_lambda * np.eye(10)  # Regularize only the last 10 parameters
+#     return hess
+
+# def modified_hessian(theta):
+#     hess = hessian_regularized(theta)
+#     epsilon = 1e-8  # Small constant
+#     hess += epsilon * np.eye(hess.shape[0])
+#     return hess
+
+while True:
+    
+    # Define the callback function
+    def optimization_callback(xk):
+        current_cost = costFunction(xk)
+        current_grad = gradient1(xk)
+        max_abs_grad = np.max(np.abs(current_grad))
+        
+        # Display progress every iteration
+        
+        # Every 10 iterations, compute and display the min eigenvalue of the Hessian
+        if optimization_callback.iteration % 10 == 0:
+            current_hessian = hessian(xk)
+            eigenvalues = np.linalg.eigvalsh(current_hessian)
+            min_eig = np.min(eigenvalues)
+
+            print(f"Iteration {optimization_callback.iteration}: Cost = {current_cost}, MaxGrad = {max_abs_grad}, MinEigval = {min_eig}")
+        
+        optimization_callback.iteration += 1
+
+
+    
+    # Initialize fitting parameters
+    theta = np.zeros((12,1))  # Create an array of zeros
+    theta[:2] = np.random.normal(0, 2, size=(2, 1))  # Fill the first two with random numbers
+    # theta[2] = np.random.uniform(1500, 2500, size=(1, 1))  # Fill the next two with random numbers
+    # theta[3] = np.random.uniform(50, 150, size=(1, 1))  # Fill the rest with random numbers
+    theta[2:] = np.random.normal(0, 10, size=(10, 1))
+    theta = np.ravel(theta)  # ensure theta is a 1-D array
+    # print('Initial theta: ', theta)
+    
+#    theta = np.array([[-2.06],
+#                       [-3.86],
+#                       [2057.59],
+#                       [101.65],
+#                       [34300.78],
+#                       [14568.66],
+#                       [0.71],
+#                       [21.57],
+#                       [3.51],
+#                       [1.10],
+#                       [2.90],
+#                       [4.51]]).ravel()
+    
+    # theta = np.load('../reports/parameters/theta_may-jun_SLSQP_power.npy', allow_pickle=True)
+    # theta = np.ravel(theta)
+    
+    
+    try:
+        # Minimize the cost function and get the optimized parameter values
+        
+        res = minimize(
+            costFunction,
+            theta,
+            method='SLSQP',  # 'L-BFGS-B', 'SLSQP', 'trust-constr', etc.
+            jac=gradient1,
+            hess=hessian,
+            bounds=bounds,
+            callback=optimization_callback,
+            options={'ftol': 1e-5, 'maxiter': 100000, 'disp': True, 'verbose': 2} 
+        )
+
+        theta = res.x
+        #print('Optimized theta: ', theta)
+        max_abs_grad = np.max(np.abs(gradient(theta)))
+        min_eig_hess = np.min(np.linalg.eigvalsh(hessian(theta)))
+        
+        print('Period: ', period, 'MaxGrad: ', max_abs_grad, 'MinEig: ', min_eig_hess, end='\n')
+        print('Final theta: ', theta)
+        # print('EigValues: ', np.linalg.eigvalsh(hessian(theta)))
+        # Check custom convergence criteria
+        if (min_eig_hess > 1e-12):
+            break
+    except np.linalg.LinAlgError:
+        print('LinAlgError: eigenvalues did not converge. Retrying...')
+
+theta = theta.reshape(12, 1)   
