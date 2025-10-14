@@ -1,0 +1,254 @@
+# Loading library
+library(magrittr) # needs to be run every time you start R and want to use %>%
+library(dplyr)    # alternatively, this also loads %>%
+library(ggplot2)
+library(psych)
+library(corrr)
+library(tidyverse)
+library(gridExtra)
+library(rsample)   # data splitting
+library(ggplot2)   # allows extension of visualizations
+library(dplyr)     # basic data transformation
+library(stargazer) #We have to library the package every time we use
+library(tigerstats)
+library(skimr)
+library("CausalGPS")
+library("devtools")
+library(CBPS)
+library(margins)
+
+df <- read.csv(".../Powdery_spillover_github.csv", check.names=FALSE)
+
+df_v1 <- subset(df, select=c('Year','Susceptibility to R6 Strains',
+                             'Susceptibility to non-R6 Strains',
+                             'DiseaseinApril','DiseaseinMay','DiseaseinJune','DiseaseinJuly',
+                             'Flag shoot incidence','Pruning Quality Final',
+                             'Initial Strain','Monthly_cost_June',
+                             'Monthly_cost_July','Monthly_ingredient_June',
+                             'Monthly_ingredient_July',
+                             'Weighted_dc_aprmay1',
+                             'Weighted_dc_aprmay2',
+                             'Weighted_dc_mayjun1',
+                             'Weighted_dc_mayjun2',
+                             'Weighted_dc_junjul1',
+                             'Weighted_dc_junjul2',
+                             'Quadrant', 'SyntheticinApril',
+                             'SyntheticinMay','SyntheticinJune',
+                             'SyntheticinJuly','NonsyntheticinApril',
+                             'NonsyntheticinMay','NonsyntheticinJune',
+                             'NonsyntheticinJuly','MixtureinApril',
+                             'MixtureinMay','MixtureinJune',
+                             'MixtureinJuly'))
+
+colnames(df_v1) <- c('Year','Susceptibility_to_R6_strains',
+                     'Susceptibility_to_non_R6_strains',
+                     'Mildew_incidence_in_April','Mildew_incidence_in_May',
+                     'Mildew_incidence_in_June','Mildew_incidence_in_July',
+                     'Flag_shoot_incidence','Pruning',
+                     'Initial_Strain','Monthly_cost_June',
+                     'Monthly_cost_July','Monthly_ingredient_June',
+                     'Monthly_ingredient_July',
+                     'Degree_Apr_May_1',
+                     'Degree_Apr_May_2',
+                     'Degree_May_Jun_1',
+                     'Degree_May_Jun_2',
+                     'Degree_Jun_Jul_1',
+                     'Degree_Jun_Jul_2',
+                     'Quadrant',
+                     'Synthetic_in_April',
+                     'Synthetic_in_May','Synthetic_in_June',
+                     'Synthetic_in_July','Nonsynthetic_in_April',
+                     'Nonsynthetic_in_May','Nonsynthetic_in_June',
+                     'Nonsynthetic_in_July','Mixture_in_April',
+                     'Mixture_in_May','Mixture_in_June',
+                     'Mixture_in_July')
+
+
+df_v1$Year <- as.factor(df_v1$Year)
+df_v1$Susceptibility_to_R6_strains <- as.factor(df_v1$Susceptibility_to_R6_strains)
+df_v1$Susceptibility_to_non_R6_strains <- as.factor(df_v1$Susceptibility_to_non_R6_strains)
+df_v1$Pruning <- as.factor(df_v1$Pruning)
+df_v1$Initial_Strain <- as.factor(df_v1$Initial_Strain)
+df_v1$Quadrant <- as.factor(df_v1$Quadrant)
+df_v1$Mildew_incidence_in_April <- as.numeric(df_v1$Mildew_incidence_in_April)
+df_v1$Mildew_incidence_in_May <- as.numeric(df_v1$Mildew_incidence_in_May)
+df_v1$Mildew_incidence_in_June <- as.numeric(df_v1$Mildew_incidence_in_June)
+df_v1$Mildew_incidence_in_July <- as.numeric(df_v1$Mildew_incidence_in_July)
+df_v1$Flag_shoot_incidence <- as.numeric(df_v1$Flag_shoot_incidence)
+df_v1$Monthly_cost_June <- as.numeric(df_v1$Monthly_cost_June)
+df_v1$Monthly_cost_July <- as.numeric(df_v1$Monthly_cost_July)
+df_v1$Monthly_ingredient_June <- as.numeric(df_v1$Monthly_ingredient_June)
+df_v1$Monthly_ingredient_July <- as.numeric(df_v1$Monthly_ingredient_July)
+df_v1$Degree_Apr_May_1 <- as.numeric(df_v1$Degree_Apr_May_1)
+df_v1$Degree_Apr_May_2 <- as.numeric(df_v1$Degree_Apr_May_2)
+df_v1$Degree_May_Jun_1 <- as.numeric(df_v1$Degree_May_Jun_1)
+df_v1$Degree_May_Jun_2 <- as.numeric(df_v1$Degree_May_Jun_2)
+df_v1$Degree_Jun_Jul_1 <- as.numeric(df_v1$Degree_Jun_Jul_1)
+df_v1$Degree_Jun_Jul_2 <- as.numeric(df_v1$Degree_Jun_Jul_2)
+df_v1$Synthetic_in_April <- as.numeric(df_v1$Synthetic_in_April)
+df_v1$Synthetic_in_May <- as.numeric(df_v1$Synthetic_in_May)
+df_v1$Synthetic_in_June <- as.numeric(df_v1$Synthetic_in_June)
+df_v1$Synthetic_in_July <- as.numeric(df_v1$Synthetic_in_July)
+df_v1$Nonsynthetic_in_April <- as.numeric(df_v1$Nonsynthetic_in_April)
+df_v1$Nonsynthetic_in_May <- as.numeric(df_v1$Nonsynthetic_in_May)
+df_v1$Nonsynthetic_in_June <- as.numeric(df_v1$Nonsynthetic_in_June)
+df_v1$Nonsynthetic_in_July <- as.numeric(df_v1$Nonsynthetic_in_July)
+df_v1$Mixture_in_April <- as.numeric(df_v1$Mixture_in_April)
+df_v1$Mixture_in_May <- as.numeric(df_v1$Mixture_in_May)
+df_v1$Mixture_in_June <- as.numeric(df_v1$Mixture_in_June)
+df_v1$Mixture_in_July <- as.numeric(df_v1$Mixture_in_July)
+
+# Mildew incidence in May
+mi_may <- glm(Monthly_cost_June~ Mildew_incidence_in_May+Susceptibility_to_R6_strains+Susceptibility_to_non_R6_strains+
+                Flag_shoot_incidence+Pruning+
+                Initial_Strain+Degree_May_Jun_1+
+                Degree_May_Jun_2+Quadrant+Nonsynthetic_in_April, 
+          data = df_v1)
+summary(mi_may)
+
+
+# Install and load the package
+install.packages("sjPlot")
+library(sjPlot)
+library(ggplot2)
+
+
+
+# Plot marginal effects
+png("mi_may.png", width=5000,height=4000, res=1000)
+plot_model(mi_may, type = "pred", terms = "Mildew_incidence_in_May", colors = "orange") +
+  theme(
+    panel.background = element_rect(fill = "transparent", color = "black"))
+dev.off()
+
+
+# Monthly cost in July
+mi_june <- glm(Monthly_cost_July ~ Mildew_incidence_in_June+Susceptibility_to_R6_strains+Susceptibility_to_non_R6_strains+
+                 Flag_shoot_incidence+Pruning+
+                 Initial_Strain+Degree_Jun_Jul_1+
+                 Degree_Jun_Jul_2+Quadrant+Synthetic_in_May+Nonsynthetic_in_May, 
+              data = df_v1)
+summary(mi_june)
+
+
+# Plot marginal effects
+png("mi_june.png", width=5000,height=4000, res=1000)
+plot_model(mi_june, type = "pred", terms = "Mildew_incidence_in_June", colors = "orange") +
+  theme(
+    panel.background = element_rect(fill = "transparent", color = "black"))
+dev.off()
+
+
+# Without degree centrality
+
+
+# Mildew incidence in May
+mi_may <- glm(Monthly_cost_June~ Mildew_incidence_in_May+Susceptibility_to_R6_strains+Susceptibility_to_non_R6_strains+
+                Flag_shoot_incidence+Pruning+
+                Initial_Strain+Quadrant+Nonsynthetic_in_April, 
+              data = df_v1)
+summary(mi_may)
+
+
+# Plot marginal effects
+
+png("mi_may_without.png", width=5000,height=4000, res=1000)
+plot_model(mi_may, type = "pred", terms = "Mildew_incidence_in_May", colors = "blue") +
+  theme(
+    panel.background = element_rect(fill = "transparent", color = "black"))
+dev.off()
+
+
+# Monthly cost in July
+mi_june <- glm(Monthly_cost_July ~ Mildew_incidence_in_June+Susceptibility_to_R6_strains+Susceptibility_to_non_R6_strains+
+                 Flag_shoot_incidence+Pruning+
+                 Initial_Strain+Quadrant+Synthetic_in_May+Nonsynthetic_in_May, 
+               data = df_v1)
+summary(mi_june)
+
+
+# Plot marginal effects
+png("mi_june_without.png", width=5000,height=4000, res=1000)
+plot_model(mi_june, type = "pred", terms = "Mildew_incidence_in_June", colors = "blue") +
+  theme(
+    panel.background = element_rect(fill = "transparent", color = "black"))
+dev.off()
+
+
+
+## Active ingredients
+
+# Mildew incidence in May
+mi_may <- glm(Monthly_ingredient_June~ Mildew_incidence_in_May+Susceptibility_to_R6_strains+Susceptibility_to_non_R6_strains+
+                Flag_shoot_incidence+Pruning+
+                Initial_Strain+Degree_May_Jun_1+
+                Degree_May_Jun_2+Quadrant+Nonsynthetic_in_April, 
+              data = df_v1)
+summary(mi_may)
+
+
+
+# Install and load the package
+install.packages("sjPlot")
+library(sjPlot)
+library(ggplot2)
+
+
+# Plot marginal effects
+
+png("Monthly_ingredient_may.png", width=5000,height=4000, res=1000)
+plot_model(mi_may, type = "pred", terms = "Mildew_incidence_in_May", colors = "orange") +
+  theme(
+    panel.background = element_rect(fill = "transparent", color = "black"))
+dev.off()
+
+
+# Monthly cost in July
+mi_june <- glm(Monthly_ingredient_July ~ Mildew_incidence_in_June+Susceptibility_to_R6_strains+Susceptibility_to_non_R6_strains+
+                 Flag_shoot_incidence+Pruning+
+                 Initial_Strain+Degree_Jun_Jul_1+
+                 Degree_Jun_Jul_2+Quadrant+Synthetic_in_May+Nonsynthetic_in_May, 
+               data = df_v1)
+summary(mi_june)
+
+
+# Plot marginal effects
+png("Monthly_ingredient_june.png", width=5000,height=4000, res=1000)
+plot_model(mi_june, type = "pred", terms = "Mildew_incidence_in_June", colors = "orange") +
+  theme(
+    panel.background = element_rect(fill = "transparent", color = "black"))
+dev.off()
+
+
+# Without degree centrality
+
+
+# Mildew incidence in May
+mi_may <- glm(Monthly_ingredient_June~ Mildew_incidence_in_May+Susceptibility_to_R6_strains+Susceptibility_to_non_R6_strains+
+                Flag_shoot_incidence+Pruning+
+                Initial_Strain+Quadrant+Nonsynthetic_in_April, 
+              data = df_v1)
+summary(mi_may)
+
+# Plot marginal effects
+png("Monthly_ingredient_may_without.png", width=5000,height=4000, res=1000)
+plot_model(mi_may, type = "pred", terms = "Mildew_incidence_in_May", colors = "blue") +
+  theme(
+    panel.background = element_rect(fill = "transparent", color = "black"))
+dev.off()
+
+
+# Monthly cost in July
+mi_june <- glm(Monthly_ingredient_July ~ Mildew_incidence_in_June+Susceptibility_to_R6_strains+Susceptibility_to_non_R6_strains+
+                 Flag_shoot_incidence+Pruning+
+                 Initial_Strain+Quadrant+Synthetic_in_May+Nonsynthetic_in_May, 
+               data = df_v1)
+summary(mi_june)
+
+
+# Plot marginal effects
+png("Monthly_ingredient_june_without.png", width=5000,height=4000, res=1000)
+plot_model(mi_june, type = "pred", terms = "Mildew_incidence_in_June", colors = "blue") +
+  theme(
+    panel.background = element_rect(fill = "transparent", color = "black"))
+dev.off()
