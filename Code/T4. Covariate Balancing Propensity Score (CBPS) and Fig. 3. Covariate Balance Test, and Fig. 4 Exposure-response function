@@ -23,7 +23,7 @@ library(lmtest)
 # We have multiple Covariate Balance Tests for Figure 3. 
 # We have multiple summaries of Covariate Balancing Propensity Score (CBPS) for Table 3. 
 
-df <- read.csv(".../Powdery_spillover_v4_github.csv", check.names=FALSE)
+df <- read.csv(".../Powdery_spillover_github.csv", check.names=FALSE)
 
 df_v1 <- subset(df, select=c('Year','Susceptibility to R6 Strains',
                              'Susceptibility to non-R6 Strains',
