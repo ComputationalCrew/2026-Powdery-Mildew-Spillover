@@ -1,0 +1,210 @@
+library(dplyr)
+library(geosphere)
+library(ggplot2)
+library(ggExtra)
+
+data <- read.csv(".../powdery_mildew_fungicide_record_database.csv", check.names=FALSE)
+
+
+# Create yard-year dataset
+yards <- data %>%
+  group_by(Grower, Field_ID, Year) %>%
+  summarise(
+    Centroid_Lat = first(Centroid_Lat),
+    Centroid_Long = first(Centroid_Long),
+    June_cost = mean(Monthly_cost_June, na.rm = TRUE),
+    Seasonal_mildew,
+    Area
+  ) %>%
+  ungroup()
+
+# Function to compute 10th percentile distances
+compute_p10 <- function(data){
+  
+  coords <- as.matrix(data[,c("Centroid_Long","Centroid_Lat")])
+  
+  dist_matrix <- distm(coords, fun = distHaversine)
+  
+  p10 <- apply(dist_matrix,1,function(x){
+    x <- x[x>0]
+    quantile(x,0.10,na.rm=TRUE)
+  })
+  
+  data$p10_distance_m <- p10
+  return(data)
+}
+
+yards_p10 <- yards %>%
+  group_by(Year) %>%
+  group_modify(~compute_p10(.x)) %>%
+  ungroup()
+
+# Scatter plot
+p <- ggplot(yards_p10,
+            aes(x=p10_distance_m/1000,
+                y=June_cost)) +
+  geom_point(aes(color=Seasonal_mildew, size = Area)) +
+  labs(
+    x="10th percentile distance to other yards (km)",
+    y="Average June monthly cost",
+    title="June cost vs spatial isolation of hop yards"
+  ) +
+  theme_classic() + ylim(0, 800)
+
+
+# Add marginal histograms
+png("C:/Users/Jaeyoung.Hwang/Documents/outcome_distance_june_cost.png",width=20,height=16,units="cm" , res = 1000)
+ggMarginal(p, type="histogram", bins=20)
+dev.off()
+
+# Create yard-year dataset
+
+# Create yard-year dataset
+yards <- data %>%
+  group_by(Grower, Field_ID, Year) %>%
+  summarise(
+    Centroid_Lat = first(Centroid_Lat),
+    Centroid_Long = first(Centroid_Long),
+    July_cost = mean(Monthly_cost_July, na.rm = TRUE),
+    Seasonal_mildew,
+    Area
+  ) %>%
+  ungroup()
+# Function to compute 10th percentile distances
+compute_p10 <- function(data){
+  
+  coords <- as.matrix(data[,c("Centroid_Long","Centroid_Lat")])
+  
+  dist_matrix <- distm(coords, fun = distHaversine)
+  
+  p10 <- apply(dist_matrix,1,function(x){
+    x <- x[x>0]
+    quantile(x,0.10,na.rm=TRUE)
+  })
+  
+  data$p10_distance_m <- p10
+  return(data)
+}
+
+yards_p10 <- yards %>%
+  group_by(Year) %>%
+  group_modify(~compute_p10(.x)) %>%
+  ungroup()
+
+p <- ggplot(yards_p10,
+            aes(x=p10_distance_m/1000,
+                y=July_cost)) +
+  geom_point(aes(color=Seasonal_mildew, size = Area)) +
+  labs(
+    x="10th percentile distance to other yards (km)",
+    y="Average July monthly cost",
+    title="July cost vs spatial isolation of hop yards"
+  ) +
+  theme_classic() + ylim(0, 800)
+
+
+
+# Add marginal histograms
+png("C:/Users/Jaeyoung.Hwang/Documents/outcome_distance_july_cost.png",width=20,height=16,units="cm" , res = 1000)
+ggMarginal(p, type="histogram", bins=20)
+dev.off()
+
+
+
+# Create yard-year dataset
+yards <- data %>%
+  group_by(Grower, Field_ID, Year) %>%
+  summarise(
+    Centroid_Lat = first(Centroid_Lat),
+    Centroid_Long = first(Centroid_Long),
+    June_ingredient = mean(Monthly_ingredient_June, na.rm = TRUE),
+    Seasonal_mildew,
+    Area
+  ) %>%
+  ungroup()
+
+# Function to compute 10th percentile distances
+compute_p10 <- function(data){
+  
+  coords <- as.matrix(data[,c("Centroid_Long","Centroid_Lat")])
+  
+  dist_matrix <- distm(coords, fun = distHaversine)
+  
+  p10 <- apply(dist_matrix,1,function(x){
+    x <- x[x>0]
+    quantile(x,0.10,na.rm=TRUE)
+  })
+  
+  data$p10_distance_m <- p10
+  return(data)
+}
+
+yards_p10 <- yards %>%
+  group_by(Year) %>%
+  group_modify(~compute_p10(.x)) %>%
+  ungroup()
+
+p <- ggplot(yards_p10,
+            aes(x=p10_distance_m/1000,
+                y=June_ingredient)) +
+  geom_point(aes(color=Seasonal_mildew, size = Area)) +
+  labs(
+    x="10th percentile distance to other yards (km)",
+    y="Average June monthly ingredient",
+    title="June ingredient vs spatial isolation of hop yards"
+  ) +
+  theme_classic() + ylim(0, 8)
+# Add marginal histograms
+png("C:/Users/Jaeyoung.Hwang/Documents/outcome_distance_june_ingredient.png",width=20,height=16,units="cm" , res = 1000)
+ggMarginal(p, type="histogram", bins=20)
+dev.off()
+
+
+# Create yard-year dataset
+yards <- data %>%
+  group_by(Grower, Field_ID, Year) %>%
+  summarise(
+    Centroid_Lat = first(Centroid_Lat),
+    Centroid_Long = first(Centroid_Long),
+    July_ingredient = mean(Monthly_ingredient_July, na.rm = TRUE),
+    Seasonal_mildew,
+    Area
+  ) %>%
+  ungroup()
+
+# Function to compute 10th percentile distances
+compute_p10 <- function(data){
+  
+  coords <- as.matrix(data[,c("Centroid_Long","Centroid_Lat")])
+  
+  dist_matrix <- distm(coords, fun = distHaversine)
+  
+  p10 <- apply(dist_matrix,1,function(x){
+    x <- x[x>0]
+    quantile(x,0.10,na.rm=TRUE)
+  })
+  
+  data$p10_distance_m <- p10
+  return(data)
+}
+
+yards_p10 <- yards %>%
+  group_by(Year) %>%
+  group_modify(~compute_p10(.x)) %>%
+  ungroup()
+p <- ggplot(yards_p10,
+            aes(x=p10_distance_m/1000,
+                y=July_ingredient)) +
+  geom_point(aes(color=Seasonal_mildew, size = Area)) +
+  labs(
+    x="10th percentile distance to other yards (km)",
+    y="Average July monthly ingredient",
+    title="July ingredient vs spatial isolation of hop yards"
+  ) +
+  theme_classic() + ylim(0, 8)
+
+
+# Add marginal histograms
+png("C:/Users/Jaeyoung.Hwang/Documents/outcome_distance_july_ingredient.png",width=20,height=16,units="cm" , res = 1000)
+ggMarginal(p, type="histogram", bins=20)
+dev.off()
