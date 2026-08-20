@@ -25,6 +25,7 @@ library(lmtest)
 
 df <- read.csv(".../Powdery_spillover_github.csv", check.names=FALSE)
 
+
 df_v1 <- subset(df, select=c('Year','Susceptibility to R6 Strains',
                              'Susceptibility to non-R6 Strains',
                              'DiseaseinApril','DiseaseinMay','DiseaseinJune','DiseaseinJuly',
@@ -32,12 +33,8 @@ df_v1 <- subset(df, select=c('Year','Susceptibility to R6 Strains',
                              'Initial Strain','Monthly_cost_June',
                              'Monthly_cost_July','Monthly_ingredient_June',
                              'Monthly_ingredient_July',
-                             'Weighted_dc_aprmay1',
-                             'Weighted_dc_aprmay2',
-                             'Weighted_dc_mayjun1',
-                             'Weighted_dc_mayjun2',
-                             'Weighted_dc_junjul1',
-                             'Weighted_dc_junjul2',
+                             'Weighted_dc_mayjun',
+                             'Weighted_dc_junjul',
                              'Quadrant', 'SyntheticinApril',
                              'SyntheticinMay','SyntheticinJune',
                              'SyntheticinJuly','NonsyntheticinApril',
@@ -54,12 +51,8 @@ colnames(df_v1) <- c('Year','Susceptibility_to_R6_strains',
                      'Initial_Strain','Monthly_cost_June',
                      'Monthly_cost_July','Monthly_ingredient_June',
                      'Monthly_ingredient_July',
-                     'Degree_Apr_May_1',
-                     'Degree_Apr_May_2',
-                     'Degree_May_Jun_1',
-                     'Degree_May_Jun_2',
-                     'Degree_Jun_Jul_1',
-                     'Degree_Jun_Jul_2',
+                     'Degree_May_Jun',
+                     'Degree_Jun_Jul',
                      'Quadrant',
                      'Synthetic_in_April',
                      'Synthetic_in_May','Synthetic_in_June',
@@ -85,12 +78,8 @@ df_v1$Monthly_cost_June <- as.numeric(df_v1$Monthly_cost_June)
 df_v1$Monthly_cost_July <- as.numeric(df_v1$Monthly_cost_July)
 df_v1$Monthly_ingredient_June <- as.numeric(df_v1$Monthly_ingredient_June)
 df_v1$Monthly_ingredient_July <- as.numeric(df_v1$Monthly_ingredient_July)
-df_v1$Degree_Apr_May_1 <- as.numeric(df_v1$Degree_Apr_May_1)
-df_v1$Degree_Apr_May_2 <- as.numeric(df_v1$Degree_Apr_May_2)
-df_v1$Degree_May_Jun_1 <- as.numeric(df_v1$Degree_May_Jun_1)
-df_v1$Degree_May_Jun_2 <- as.numeric(df_v1$Degree_May_Jun_2)
-df_v1$Degree_Jun_Jul_1 <- as.numeric(df_v1$Degree_Jun_Jul_1)
-df_v1$Degree_Jun_Jul_2 <- as.numeric(df_v1$Degree_Jun_Jul_2)
+df_v1$Degree_May_Jun <- as.numeric(df_v1$Degree_May_Jun)
+df_v1$Degree_Jun_Jul <- as.numeric(df_v1$Degree_Jun_Jul)
 df_v1$Synthetic_in_April <- as.numeric(df_v1$Synthetic_in_April)
 df_v1$Synthetic_in_May <- as.numeric(df_v1$Synthetic_in_May)
 df_v1$Synthetic_in_June <- as.numeric(df_v1$Synthetic_in_June)
@@ -104,9 +93,15 @@ df_v1$Mixture_in_May <- as.numeric(df_v1$Mixture_in_May)
 df_v1$Mixture_in_June <- as.numeric(df_v1$Mixture_in_June)
 df_v1$Mixture_in_July <- as.numeric(df_v1$Mixture_in_July)
 
-df_v1$id <- seq(450)
+df_v1$id <- seq(464)
 
 set.seed(123)
+
+colnames(df_v1)
+
+library(stargazer) 
+# # Table. Descriptive Statistics
+stargazer(df_v1, type = "text", title="Descriptive statistics", digits=2, out="table1.txt")
 
 
 #================================================
@@ -134,9 +129,9 @@ m_xgboost <- function(nthread = 1,
 
 data_with_gps <- estimate_gps(.data = df_v1,
                               .formula = Mildew_incidence_in_May~ Susceptibility_to_R6_strains+Susceptibility_to_non_R6_strains+
-                                Flag_shoot_incidence+Pruning+
-                                Initial_Strain+Degree_May_Jun_1+
-                                Degree_May_Jun_2+Quadrant+Synthetic_in_April+Nonsynthetic_in_April+Mixture_in_April,
+                                Flag_shoot_incidence+Pruning+Initial_Strain+
+                                Degree_May_Jun+
+                                Quadrant+Synthetic_in_May+Nonsynthetic_in_May,
                               sl_lib = c("m_xgboost"),
                               gps_density = "kernel")
 
@@ -145,7 +140,6 @@ data_with_gps <- estimate_gps(.data = df_v1,
 cw_object_matching <- compute_counter_weight(gps_obj = data_with_gps,
                                              ci_appr = "weighting",
                                              bin_seq = NULL, 
-                                             delta_n = 0.1,
                                              dist_measure = "l1",
                                              scale = 0.5,
                                              use_cov_transform = TRUE,
@@ -156,7 +150,6 @@ cw_object_matching <- compute_counter_weight(gps_obj = data_with_gps,
                                              max_attempt = 4,
                                              dist_measure = "l1",
                                              delta_n = 0.02,          # changed from 1 to 0.02
-                                             scale = 0.5,
                                              nthread = 1)
 
 
@@ -164,10 +157,9 @@ pseudo_pop <- generate_pseudo_pop(.data = df_v1,
                                   cw_obj = cw_object_matching,
                                   covariate_col_names = c("Susceptibility_to_R6_strains", 
                                                           "Susceptibility_to_non_R6_strains", 
-                                                          "Flag_shoot_incidence", "Pruning", "Initial_Strain", 
-                                                          "Degree_May_Jun_1", "Degree_May_Jun_2", "Quadrant", 
-                                                          "Synthetic_in_April","Nonsynthetic_in_April",
-                                                          "Mixture_in_April"),
+                                                          "Flag_shoot_incidence", "Pruning","Initial_Strain", 
+                                                          "Degree_May_Jun", "Quadrant", 
+                                                          "Synthetic_in_May","Nonsynthetic_in_May"),
                                   covar_bl_trs = 0.3,
                                   covar_bl_trs_type = "median",
                                   covar_bl_method = "absolute")
@@ -178,13 +170,10 @@ plot(pseudo_pop, include_details = TRUE) + theme(panel.grid.major = element_blan
                                                  panel.background = element_blank(), axis.line = element_line(colour = "black")) 
 dev.off()
 
-plot(pseudo_pop)
-
-
 # ERF
 # Annual costs
 erf_obj_nonparametric <- estimate_erf(.data = pseudo_pop$.data,
-                                      .formula = Monthly_cost_June ~ Mildew_incidence_in_May*Degree_May_Jun_1,
+                                      .formula = Monthly_cost_June ~ Mildew_incidence_in_May,
                                       weights_col_name = "counter_weight",
                                       model_type = "nonparametric",
                                       w_vals = seq(0,0.38,0.02),
@@ -218,9 +207,9 @@ erf_obj_nonparametric[[".data_prediction"]][["y_pred"]]
 cbps_model <- CBPS(Mildew_incidence_in_May ~ Susceptibility_to_R6_strains
                    + Susceptibility_to_non_R6_strains+
                      Flag_shoot_incidence+Pruning+
-                     Initial_Strain+Degree_May_Jun_1+
-                     Degree_May_Jun_2 + Quadrant+Synthetic_in_April+Nonsynthetic_in_April+
-                     Mixture_in_April, 
+                     Initial_Strain+Degree_May_Jun+ 
+                     Quadrant+Synthetic_in_May+
+                     Nonsynthetic_in_May,
                    method = "exact", data = df_v1, ATT=TRUE)
 
 summary(cbps_model)
@@ -228,13 +217,22 @@ summary(cbps_model)
 
 # Without degree centrality
 
+m_xgboost <- function(nthread = 1,
+                      ntrees = 1000,
+                      shrinkage = 0.3,
+                      max_depth = 5,
+                      ...) {SuperLearner::SL.xgboost(
+                        nthread = nthread,
+                        ntrees = ntrees,
+                        shrinkage=shrinkage,
+                        max_depth=max_depth,
+                        ...)}
+
 
 data_with_gps <- estimate_gps(.data = df_v1,
                               .formula = Mildew_incidence_in_May~ Susceptibility_to_R6_strains+Susceptibility_to_non_R6_strains+
-                                Flag_shoot_incidence+Pruning+
-                                Initial_Strain+
-                                Quadrant+Synthetic_in_April+Nonsynthetic_in_April+
-                                Mixture_in_April,
+                                Flag_shoot_incidence+Pruning+Initial_Strain+
+                                Quadrant+Synthetic_in_May+Nonsynthetic_in_May,
                               sl_lib = c("m_xgboost"),
                               gps_density = "kernel")
 
@@ -243,7 +241,6 @@ data_with_gps <- estimate_gps(.data = df_v1,
 cw_object_matching <- compute_counter_weight(gps_obj = data_with_gps,
                                              ci_appr = "weighting",
                                              bin_seq = NULL, 
-                                             delta_n = 0.1,
                                              dist_measure = "l1",
                                              scale = 0.5,
                                              use_cov_transform = TRUE,
@@ -254,18 +251,17 @@ cw_object_matching <- compute_counter_weight(gps_obj = data_with_gps,
                                              max_attempt = 4,
                                              dist_measure = "l1",
                                              delta_n = 0.02,          # changed from 1 to 0.02
-                                             scale = 0.5,
                                              nthread = 1)
+
 
 
 pseudo_pop <- generate_pseudo_pop(.data = df_v1,
                                   cw_obj = cw_object_matching,
                                   covariate_col_names = c("Susceptibility_to_R6_strains", 
                                                           "Susceptibility_to_non_R6_strains", 
-                                                          "Flag_shoot_incidence", "Pruning", "Initial_Strain", 
+                                                          "Flag_shoot_incidence", "Pruning","Initial_Strain",  
                                                           "Quadrant", 
-                                                          "Synthetic_in_April", "Nonsynthetic_in_April",
-                                                          "Mixture_in_April"),
+                                                          "Synthetic_in_May","Nonsynthetic_in_April"),
                                   covar_bl_trs = 0.3,
                                   covar_bl_trs_type = "median",
                                   covar_bl_method = "absolute")
@@ -275,9 +271,6 @@ png("pseudo_pop_May_woDC.png", width=6000,height=7000, res=1000)
 plot(pseudo_pop, include_details = TRUE) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
                                                  panel.background = element_blank(), axis.line = element_line(colour = "black")) 
 dev.off()
-
-plot(pseudo_pop)
-
 
 
 # ERF
@@ -316,8 +309,9 @@ erf_obj_nonparametric[[".data_prediction"]][["y_pred"]]
 cbps_model <- CBPS(Mildew_incidence_in_May ~ Susceptibility_to_R6_strains
                    + Susceptibility_to_non_R6_strains+
                      Flag_shoot_incidence+Pruning+
-                     Initial_Strain+ Quadrant+Synthetic_in_April+Nonsynthetic_in_April+
-                     Mixture_in_April, 
+                     Initial_Strain+ 
+                     Quadrant+Synthetic_in_May+
+                     Nonsynthetic_in_May,
                    method = "exact", data = df_v1, ATT=TRUE)
 
 summary(cbps_model)
@@ -328,13 +322,23 @@ summary(cbps_model)
 #================================================
 
 
+m_xgboost <- function(nthread = 1,
+                      ntrees = 1000,
+                      shrinkage = 0.3,
+                      max_depth = 5,
+                      ...) {SuperLearner::SL.xgboost(
+                        nthread = nthread,
+                        ntrees = ntrees,
+                        shrinkage=shrinkage,
+                        max_depth=max_depth,
+                        ...)}
+
 
 data_with_gps <- estimate_gps(.data = df_v1,
                               .formula = Mildew_incidence_in_June~ Susceptibility_to_R6_strains+Susceptibility_to_non_R6_strains+
-                                Flag_shoot_incidence+Pruning+
-                                Initial_Strain+Degree_Jun_Jul_1+
-                                Degree_Jun_Jul_2+Quadrant+Synthetic_in_May+Nonsynthetic_in_May+
-                                Mixture_in_May,
+                                Flag_shoot_incidence+Pruning+Initial_Strain+
+                                Degree_Jun_Jul+
+                                Quadrant+Synthetic_in_June+Nonsynthetic_in_June+Mixture_in_June,
                               sl_lib = c("m_xgboost"),
                               gps_density = "kernel")
 
@@ -343,7 +347,6 @@ data_with_gps <- estimate_gps(.data = df_v1,
 cw_object_matching <- compute_counter_weight(gps_obj = data_with_gps,
                                              ci_appr = "weighting",
                                              bin_seq = NULL, 
-                                             delta_n = 0.1,
                                              dist_measure = "l1",
                                              scale = 0.5,
                                              use_cov_transform = TRUE,
@@ -354,7 +357,6 @@ cw_object_matching <- compute_counter_weight(gps_obj = data_with_gps,
                                              max_attempt = 4,
                                              dist_measure = "l1",
                                              delta_n = 0.02,          # changed from 1 to 0.02
-                                             scale = 0.5,
                                              nthread = 1)
 
 
@@ -362,10 +364,10 @@ pseudo_pop <- generate_pseudo_pop(.data = df_v1,
                                   cw_obj = cw_object_matching,
                                   covariate_col_names = c("Susceptibility_to_R6_strains", 
                                                           "Susceptibility_to_non_R6_strains", 
-                                                          "Flag_shoot_incidence", "Pruning", "Initial_Strain", 
-                                                          "Degree_Jun_Jul_1", "Degree_Jun_Jul_2", "Quadrant", 
-                                                          "Synthetic_in_May", "Nonsynthetic_in_May",
-                                                          "Mixture_in_May"),
+                                                          "Flag_shoot_incidence", "Pruning","Initial_Strain",  
+                                                          "Degree_Jun_Jul", "Quadrant", 
+                                                          "Synthetic_in_June", "Nonsynthetic_in_June",
+                                                          "Mixture_in_June"),
                                   covar_bl_trs = 0.3,
                                   covar_bl_trs_type = "median",
                                   covar_bl_method = "absolute")
@@ -375,8 +377,6 @@ png("pseudo_pop_June.png", width=6000,height=7000, res=1000)
 plot(pseudo_pop, include_details = TRUE) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
                                                  panel.background = element_blank(), axis.line = element_line(colour = "black")) 
 dev.off()
-
-plot(pseudo_pop)
 
 
 # ERF
@@ -416,9 +416,8 @@ erf_obj_nonparametric[[".data_prediction"]][["y_pred"]]
 # Fit CBPS model
 cbps_model <- CBPS(Mildew_incidence_in_June~ Susceptibility_to_R6_strains+Susceptibility_to_non_R6_strains+
                       Flag_shoot_incidence+Pruning+
-                      Initial_Strain+Degree_Jun_Jul_1+
-                      Degree_Jun_Jul_2+Quadrant+Synthetic_in_May+Nonsynthetic_in_May+
-                      Mixture_in_May, 
+                      Initial_Strain+Degree_Jun_Jul+
+                     Quadrant+Synthetic_in_June+Nonsynthetic_in_June+Mixture_in_June,
                    method = "exact", data = df_v1, ATT=TRUE)
 
 summary(cbps_model)
@@ -426,21 +425,28 @@ summary(cbps_model)
 # Without degree centrality
 
 
+m_xgboost <- function(nthread = 1,
+                      ntrees = 1000,
+                      shrinkage = 0.3,
+                      max_depth = 5,
+                      ...) {SuperLearner::SL.xgboost(
+                        nthread = nthread,
+                        ntrees = ntrees,
+                        shrinkage=shrinkage,
+                        max_depth=max_depth,
+                        ...)}
+
 data_with_gps <- estimate_gps(.data = df_v1,
                               .formula = Mildew_incidence_in_June~ Susceptibility_to_R6_strains+Susceptibility_to_non_R6_strains+
-                                Flag_shoot_incidence+Pruning+
-                                Initial_Strain+
-                                Quadrant+Synthetic_in_May+Nonsynthetic_in_May+
-                                Mixture_in_May,
+                                Flag_shoot_incidence+Pruning+Initial_Strain+ 
+                                Quadrant+Synthetic_in_June+Nonsynthetic_in_June+Mixture_in_June,
                               sl_lib = c("m_xgboost"),
                               gps_density = "kernel")
-
 
 
 cw_object_matching <- compute_counter_weight(gps_obj = data_with_gps,
                                              ci_appr = "weighting",
                                              bin_seq = NULL, 
-                                             delta_n = 0.1,
                                              dist_measure = "l1",
                                              scale = 0.5,
                                              use_cov_transform = TRUE,
@@ -451,7 +457,6 @@ cw_object_matching <- compute_counter_weight(gps_obj = data_with_gps,
                                              max_attempt = 4,
                                              dist_measure = "l1",
                                              delta_n = 0.02,          # changed from 1 to 0.02
-                                             scale = 0.5,
                                              nthread = 1)
 
 
@@ -459,10 +464,10 @@ pseudo_pop <- generate_pseudo_pop(.data = df_v1,
                                   cw_obj = cw_object_matching,
                                   covariate_col_names = c("Susceptibility_to_R6_strains", 
                                                           "Susceptibility_to_non_R6_strains", 
-                                                          "Flag_shoot_incidence", "Pruning", "Initial_Strain", 
-                                                           "Quadrant", 
-                                                          "Synthetic_in_May", "Nonsynthetic_in_May",
-                                                          "Mixture_in_May"),
+                                                          "Flag_shoot_incidence", "Pruning","Initial_Strain",  
+                                                          "Quadrant", 
+                                                          "Synthetic_in_June", "Nonsynthetic_in_June",
+                                                          "Mixture_in_June"),
                                   covar_bl_trs = 0.3,
                                   covar_bl_trs_type = "median",
                                   covar_bl_method = "absolute")
@@ -473,7 +478,6 @@ plot(pseudo_pop, include_details = TRUE) + theme(panel.grid.major = element_blan
                                                  panel.background = element_blank(), axis.line = element_line(colour = "black")) 
 dev.off()
 
-plot(pseudo_pop)
 
 # ERF
 # Annual costs
@@ -506,77 +510,12 @@ erf_obj_nonparametric[[".data_prediction"]][["w_vals"]]
 erf_obj_nonparametric[[".data_prediction"]][["y_pred"]]
 
 
-
 # Fit CBPS model
 cbps_model <- CBPS(Mildew_incidence_in_June~ Susceptibility_to_R6_strains+Susceptibility_to_non_R6_strains+
                      Flag_shoot_incidence+Pruning+
                      Initial_Strain+
-                     Quadrant+Synthetic_in_May+Nonsynthetic_in_May+
-                     Mixture_in_May, 
+                     Quadrant+Synthetic_in_June+Nonsynthetic_in_June+Mixture_in_June,
                    method = "exact", data = df_v1, ATT=TRUE)
 
 summary(cbps_model)
-
-
-
-library(ggplot2)
-
-
-# same figure
-
-
-dfplot <- read.csv(".../ERF_raw_cost_may_github.csv", check.names=FALSE)
-
-
-#plot all three series on the same chart using geom_line()
-
-ggplot(data=dfplot, aes(x=ExposureLevel, y=OutcomeRate, color=interaction(Interference))) +
-  geom_line() + xlim(0, 1) + ylim(-140, 200) +
-  scale_color_manual("groups",
-                     values=c("#61d4b3","#fb8d62"))+
-  xlab("Exposure Level") + ylab("Monthly costs")+ 
-  theme(panel.background = element_blank(), axis.line = element_line(colour = "black"))
-ggsave("ERF_monthlycosts_June.png", dpi=1000, height=4, width=5, units="in")
-
-
-dfplot <- read.csv(".../ERF_raw_cost_june_github.csv", check.names=FALSE)
-
-
-#plot all three series on the same chart using geom_line()
-
-ggplot(data=dfplot, aes(x=ExposureLevel, y=OutcomeRate, color=interaction(Interference))) +
-  geom_line() + xlim(0, 1) + ylim(0, 200) +
-  scale_color_manual("groups",
-                     values=c("#61d4b3","#fb8d62"))+
-  xlab("Exposure Level") + ylab("Monthly costs")+ 
-  theme(panel.background = element_blank(), axis.line = element_line(colour = "black"))
-ggsave("ERF_monthlycosts_July.png", dpi=1000, height=4, width=5, units="in")
-
-
-# Monthly ingredients
-
-dfplot <- read.csv(".../ERF_raw_ingredient_may_github.csv", check.names=FALSE)
-
-
-ggplot(data=dfplot, aes(x=ExposureLevel, y=OutcomeRate, color=interaction(Interference))) +
-  geom_line() + xlim(0, 1) + ylim(-3, 10) + 
-  scale_color_manual("groups",
-                     values=c("#61d4b3","#fb8d62"))+
-  xlab("Exposure Level") + ylab("Monthly ingredients")+ 
-  theme(panel.background = element_blank(), axis.line = element_line(colour = "black"))
-ggsave("ERF_monthlyingredients_June.png", dpi=1000, height=4, width=5, units="in")
-
-
-dfplot <- read.csv(".../ERF_raw_ingredient_june_github.csv", check.names=FALSE)
-
-
-#plot all three series on the same chart using geom_line()
-
-ggplot(data=dfplot, aes(x=ExposureLevel, y=OutcomeRate, color=interaction(Interference))) +
-  geom_line() + xlim(0, 1) + ylim(0, 10) +
-  scale_color_manual("groups",
-                     values=c("#61d4b3","#fb8d62"))+
-  xlab("Exposure Level") + ylab("Monthly ingredients")+ 
-  theme(panel.background = element_blank(), axis.line = element_line(colour = "black"))
-ggsave("ERF_monthlyingredients_July.png", dpi=1000, height=4, width=5, units="in")
 
