@@ -1,37 +1,515 @@
 # Loading library
+library(magrittr) # needs to be run every time you start R and want to use %>%
+library(dplyr)    # alternatively, this also loads %>%
 library(ggplot2)
+library(psych)
+library(corrr)
+library(tidyverse)
+library(gridExtra)
+library(rsample)   # data splitting
+library(ggplot2)   # allows extension of visualizations
+library(dplyr)     # basic data transformation
+library(stargazer) #We have to library the package every time we use
+library(skimr)
+library("CausalGPS")
+library("devtools")
+library(CBPS)
+library(twangContinuous)
 
 
-dfplot <- read.csv(".../pred_cost_June_github.csv", check.names=FALSE)
-ggplot(data=dfplot, aes(x=Mildew_incidence_in_May, y=pred, color=interaction(month))) +
-  geom_line() +  xlim(0, 1) + ylim(0, 400) +
-  scale_color_manual("groups",
-                     values=c("#61d4b3","#fb8d62"))+
-  xlab("Mildew incidence in May") + ylab("Predicted monthly costs in June")+ 
-  theme(panel.background = element_blank(), axis.line = element_line(colour = "black"))
-
-dfplot <- read.csv(".../pred_cost_July_github.csv", check.names=FALSE)
-ggplot(data=dfplot, aes(x=Mildew_incidence_in_June, y=pred, color=interaction(month))) +
-  geom_line() +  xlim(0, 1) + ylim(0, 400) +
-  scale_color_manual("groups",
-                     values=c("#61d4b3","#fb8d62"))+
-  xlab("Mildew incidence in June") + ylab("Predicted monthly costs in July")+ 
-  theme(panel.background = element_blank(), axis.line = element_line(colour = "black"))
+df <- read.csv(".../pred_cost_June_github.csv", check.names=FALSE)
 
 
-dfplot <- read.csv(".../pred_ingredient_June_github.csv", check.names=FALSE)
-ggplot(data=dfplot, aes(x=Mildew_incidence_in_May, y=pred, color=interaction(month))) +
-  geom_line() +  xlim(0, 1) + ylim(0, 10) +
-  scale_color_manual("groups",
-                     values=c("#61d4b3","#fb8d62"))+
-  xlab("Mildew incidence in May") + ylab("Predicted monthly ingredients in June")+ 
-  theme(panel.background = element_blank(), axis.line = element_line(colour = "black"))
+df_v1 <- subset(df, select=c('Year','Susceptibility to R6 Strains',
+                             'Susceptibility to non-R6 Strains',
+                             'DiseaseinApril','DiseaseinMay','DiseaseinJune','DiseaseinJuly',
+                             'Flag shoot incidence','Pruning Quality Final',
+                             'Initial Strain','Monthly_cost_June',
+                             'Monthly_cost_July','Monthly_ingredient_June',
+                             'Monthly_ingredient_July',
+                             'Weighted_dc_mayjun',
+                             'Weighted_dc_junjul',
+                             'Quadrant', 'SyntheticinApril',
+                             'SyntheticinMay','SyntheticinJune',
+                             'SyntheticinJuly','NonsyntheticinApril',
+                             'NonsyntheticinMay','NonsyntheticinJune',
+                             'NonsyntheticinJuly','MixtureinApril',
+                             'MixtureinMay','MixtureinJune',
+                             'MixtureinJuly'))
+
+colnames(df_v1) <- c('Year','Susceptibility_to_R6_strains',
+                     'Susceptibility_to_non_R6_strains',
+                     'Mildew_incidence_in_April','Mildew_incidence_in_May',
+                     'Mildew_incidence_in_June','Mildew_incidence_in_July',
+                     'Flag_shoot_incidence','Pruning',
+                     'Initial_Strain','Monthly_cost_June',
+                     'Monthly_cost_July','Monthly_ingredient_June',
+                     'Monthly_ingredient_July',
+                     'Degree_May_Jun',
+                     'Degree_Jun_Jul',
+                     'Quadrant',
+                     'Synthetic_in_April',
+                     'Synthetic_in_May','Synthetic_in_June',
+                     'Synthetic_in_July','Nonsynthetic_in_April',
+                     'Nonsynthetic_in_May','Nonsynthetic_in_June',
+                     'Nonsynthetic_in_July','Mixture_in_April',
+                     'Mixture_in_May','Mixture_in_June',
+                     'Mixture_in_July')
 
 
-dfplot <- read.csv(".../pred_ingredient_July_github.csv", check.names=FALSE)
-ggplot(data=dfplot, aes(x=Mildew_incidence_in_June, y=pred, color=interaction(month))) +
-  geom_line() +  xlim(0, 1) + ylim(0, 10) +
-  scale_color_manual("groups",
-                     values=c("#61d4b3","#fb8d62"))+
-  xlab("Mildew incidence in June") + ylab("Predicted monthly ingredients in July")+ 
-  theme(panel.background = element_blank(), axis.line = element_line(colour = "black"))
+df_v1$Year <- as.factor(df_v1$Year)
+df_v1$Susceptibility_to_R6_strains <- as.factor(df_v1$Susceptibility_to_R6_strains)
+df_v1$Susceptibility_to_non_R6_strains <- as.factor(df_v1$Susceptibility_to_non_R6_strains)
+df_v1$Pruning <- as.factor(df_v1$Pruning)
+df_v1$Initial_Strain <- as.factor(df_v1$Initial_Strain)
+df_v1$Quadrant <- as.factor(df_v1$Quadrant)
+df_v1$Mildew_incidence_in_April <- as.numeric(df_v1$Mildew_incidence_in_April)
+df_v1$Mildew_incidence_in_May <- as.numeric(df_v1$Mildew_incidence_in_May)
+df_v1$Mildew_incidence_in_June <- as.numeric(df_v1$Mildew_incidence_in_June)
+df_v1$Mildew_incidence_in_July <- as.numeric(df_v1$Mildew_incidence_in_July)
+df_v1$Flag_shoot_incidence <- as.numeric(df_v1$Flag_shoot_incidence)
+df_v1$Monthly_cost_June <- as.numeric(df_v1$Monthly_cost_June)
+df_v1$Monthly_cost_July <- as.numeric(df_v1$Monthly_cost_July)
+df_v1$Monthly_ingredient_June <- as.numeric(df_v1$Monthly_ingredient_June)
+df_v1$Monthly_ingredient_July <- as.numeric(df_v1$Monthly_ingredient_July)
+df_v1$Degree_May_Jun <- as.numeric(df_v1$Degree_May_Jun)
+df_v1$Degree_Jun_Jul <- as.numeric(df_v1$Degree_Jun_Jul)
+df_v1$Synthetic_in_April <- as.numeric(df_v1$Synthetic_in_April)
+df_v1$Synthetic_in_May <- as.numeric(df_v1$Synthetic_in_May)
+df_v1$Synthetic_in_June <- as.numeric(df_v1$Synthetic_in_June)
+df_v1$Synthetic_in_July <- as.numeric(df_v1$Synthetic_in_July)
+df_v1$Nonsynthetic_in_April <- as.numeric(df_v1$Nonsynthetic_in_April)
+df_v1$Nonsynthetic_in_May <- as.numeric(df_v1$Nonsynthetic_in_May)
+df_v1$Nonsynthetic_in_June <- as.numeric(df_v1$Nonsynthetic_in_June)
+df_v1$Nonsynthetic_in_July <- as.numeric(df_v1$Nonsynthetic_in_July)
+df_v1$Mixture_in_April <- as.numeric(df_v1$Mixture_in_April)
+df_v1$Mixture_in_May <- as.numeric(df_v1$Mixture_in_May)
+df_v1$Mixture_in_June <- as.numeric(df_v1$Mixture_in_June)
+df_v1$Mixture_in_July <- as.numeric(df_v1$Mixture_in_July)
+
+# Monthly costs
+# No DT
+
+# June_cost
+test.mod <- ps.cont(Mildew_incidence_in_May~ Susceptibility_to_R6_strains+Susceptibility_to_non_R6_strains+
+                      Flag_shoot_incidence+Pruning+Initial_Strain+
+                      Quadrant+Synthetic_in_May+Nonsynthetic_in_May, data = df_v1,
+                    n.trees = 500,
+                    shrinkage = 0.01,
+                    interaction.depth = 3,
+                    verbose = FALSE)
+
+
+plot(test.mod, plots="optimize")
+
+summary(test.mod)
+
+bal.table(test.mod, digits = 3)
+
+plot(test.mod, plots="es")
+
+library(survey)
+library(margins)  # For marginal effects
+
+df_v1$wts <- get.weights(test.mod) 
+design.ps <- svydesign(ids=~1, weights=~wts, data=df_v1) 
+
+outcome.model <- svyglm(Monthly_cost_June ~ Mildew_incidence_in_May, design = design.ps, 
+                        family = gaussian())
+summary(outcome.model)
+
+# Compute marginal effects
+marginal_effects <- margins(outcome.model)
+
+# View results
+summary(marginal_effects)
+
+# Predict log-odds for new data
+predicted <- predict(outcome.model, type = "response")
+
+
+# Generate predicted values and confidence intervals
+pred_data <- data.frame(
+  Mildew_incidence_in_May = seq(min(df_v1$Mildew_incidence_in_May), max(df_v1$Mildew_incidence_in_May), length.out = 100))
+
+# Add predictions and confidence intervals
+pred_data$pred <- predict(outcome.model, newdata = pred_data, type = "response")
+pred_data$se <- predict(outcome.model, newdata = pred_data, type = "response", se.fit = TRUE)
+pred_data$lower <- pred_data$pred - 1.96*pred_data$se
+pred_data$upper <- pred_data$pred + 1.96*pred_data$se
+
+# Export to CSV
+write.csv(pred_data, "pred_cost_noDT_June.csv", row.names = FALSE)
+
+
+# July
+test.mod <- ps.cont(Mildew_incidence_in_June~ Susceptibility_to_R6_strains+Susceptibility_to_non_R6_strains+
+                      Flag_shoot_incidence+Pruning+Initial_Strain+
+                      Quadrant+Synthetic_in_June+Nonsynthetic_in_June+Mixture_in_June, data = df_v1,
+                    n.trees = 500,
+                    shrinkage = 0.01,
+                    interaction.depth = 3,
+                    verbose = FALSE)
+
+
+plot(test.mod, plots="optimize")
+
+summary(test.mod)
+
+bal.table(test.mod, digits = 3)
+
+plot(test.mod, plots="es")
+
+library(survey)
+library(margins)  # For marginal effects
+
+df_v1$wts <- get.weights(test.mod) 
+design.ps <- svydesign(ids=~1, weights=~wts, data=df_v1) 
+
+outcome.model <- svyglm(Monthly_cost_July ~ Mildew_incidence_in_June, design = design.ps, 
+                        family = gaussian())
+summary(outcome.model)
+
+# Compute marginal effects
+marginal_effects <- margins(outcome.model)
+
+# View results
+summary(marginal_effects)
+
+# Predict log-odds for new data
+predicted <- predict(outcome.model, type = "response")
+
+
+# Generate predicted values and confidence intervals
+pred_data <- data.frame(
+  Mildew_incidence_in_June = seq(min(df_v1$Mildew_incidence_in_June), max(df_v1$Mildew_incidence_in_June), length.out = 100))
+
+# Add predictions and confidence intervals
+pred_data$pred <- predict(outcome.model, newdata = pred_data, type = "response")
+pred_data$se <- predict(outcome.model, newdata = pred_data, type = "response", se.fit = TRUE)
+pred_data$lower <- pred_data$pred - 1.96*pred_data$se
+pred_data$upper <- pred_data$pred + 1.96*pred_data$se
+
+# Export to CSV
+write.csv(pred_data, "pred_cost_noDT_July.csv", row.names = FALSE)
+
+
+# With DT
+# June
+test.mod <- ps.cont(Mildew_incidence_in_May~ Susceptibility_to_R6_strains+Susceptibility_to_non_R6_strains+
+                      Flag_shoot_incidence+Pruning+Initial_Strain+
+                      Degree_May_Jun+
+                      Quadrant+Synthetic_in_May+Nonsynthetic_in_May, data = df_v1,
+                    n.trees = 500,
+                    shrinkage = 0.01,
+                    interaction.depth = 3,
+                    verbose = FALSE)
+
+
+plot(test.mod, plots="optimize")
+
+summary(test.mod)
+
+bal.table(test.mod, digits = 3)
+
+plot(test.mod, plots="es")
+
+library(survey)
+library(margins)  # For marginal effects
+
+df_v1$wts <- get.weights(test.mod) 
+design.ps <- svydesign(ids=~1, weights=~wts, data=df_v1) 
+
+outcome.model <- svyglm(Monthly_cost_June ~ Mildew_incidence_in_May, design = design.ps, 
+                        family = gaussian())
+summary(outcome.model)
+
+# Compute marginal effects
+marginal_effects <- margins(outcome.model)
+
+# View results
+summary(marginal_effects)
+
+# Predict  for new data
+predicted <- predict(outcome.model, type = "response")
+
+
+# Generate predicted values and confidence intervals
+pred_data <- data.frame(
+  Mildew_incidence_in_May = seq(min(df_v1$Mildew_incidence_in_May), max(df_v1$Mildew_incidence_in_May), length.out = 100))
+
+# Add predictions and confidence intervals
+pred_data$pred <- predict(outcome.model, newdata = pred_data, type = "response")
+pred_data$se <- predict(outcome.model, newdata = pred_data, type = "response", se.fit = TRUE)
+pred_data$lower <- pred_data$pred - 1.96*pred_data$se
+pred_data$upper <- pred_data$pred + 1.96*pred_data$se
+
+# Export to CSV
+write.csv(pred_data, "pred_cost_withDT_June.csv", row.names = FALSE)
+
+# July
+test.mod <- ps.cont(Mildew_incidence_in_June~ Susceptibility_to_R6_strains+Susceptibility_to_non_R6_strains+
+                      Flag_shoot_incidence+Pruning+Initial_Strain+
+                      Degree_Jun_Jul+
+                      Quadrant+Synthetic_in_June+Nonsynthetic_in_June+Mixture_in_June, data = df_v1,
+                    n.trees = 500,
+                    shrinkage = 0.01,
+                    interaction.depth = 3,
+                    verbose = FALSE)
+
+
+plot(test.mod, plots="optimize")
+
+summary(test.mod)
+
+bal.table(test.mod, digits = 3)
+
+plot(test.mod, plots="es")
+
+library(survey)
+library(margins)  # For marginal effects
+
+df_v1$wts <- get.weights(test.mod) 
+design.ps <- svydesign(ids=~1, weights=~wts, data=df_v1) 
+
+outcome.model <- svyglm(Monthly_cost_July ~ Mildew_incidence_in_June, design = design.ps, 
+                        family = gaussian())
+summary(outcome.model)
+
+# Compute marginal effects
+marginal_effects <- margins(outcome.model)
+
+# View results
+summary(marginal_effects)
+
+# Predict log-odds for new data
+predicted <- predict(outcome.model, type = "response")
+
+
+# Generate predicted values and confidence intervals
+pred_data <- data.frame(
+  Mildew_incidence_in_June = seq(min(df_v1$Mildew_incidence_in_June), max(df_v1$Mildew_incidence_in_June), length.out = 100))
+
+# Add predictions and confidence intervals
+pred_data$pred <- predict(outcome.model, newdata = pred_data, type = "response")
+pred_data$se <- predict(outcome.model, newdata = pred_data, type = "response", se.fit = TRUE)
+pred_data$lower <- pred_data$pred - 1.96*pred_data$se
+pred_data$upper <- pred_data$pred + 1.96*pred_data$se
+
+# Export to CSV
+write.csv(pred_data, "pred_cost_withDT_July.csv", row.names = FALSE)
+
+
+# Monthly active ingredients
+# No DT
+
+# June
+test.mod <- ps.cont(Mildew_incidence_in_May~ Susceptibility_to_R6_strains+Susceptibility_to_non_R6_strains+
+                      Flag_shoot_incidence+Pruning+Initial_Strain+
+                      Quadrant+Synthetic_in_May+Nonsynthetic_in_May, data = df_v1,
+                    n.trees = 500,
+                    shrinkage = 0.01,
+                    interaction.depth = 3,
+                    verbose = FALSE)
+
+
+plot(test.mod, plots="optimize")
+
+summary(test.mod)
+
+bal.table(test.mod, digits = 3)
+
+plot(test.mod, plots="es")
+
+library(survey)
+library(margins)  # For marginal effects
+
+df_v1$wts <- get.weights(test.mod) 
+design.ps <- svydesign(ids=~1, weights=~wts, data=df_v1) 
+
+outcome.model <- svyglm(Monthly_ingredient_June ~ Mildew_incidence_in_May, design = design.ps, 
+                        family = gaussian())
+summary(outcome.model)
+
+# Compute marginal effects
+marginal_effects <- margins(outcome.model)
+
+# View results
+summary(marginal_effects)
+
+# Predict log-odds for new data
+predicted <- predict(outcome.model, type = "response")
+
+
+# Generate predicted values and confidence intervals
+pred_data <- data.frame(
+  Mildew_incidence_in_May = seq(min(df_v1$Mildew_incidence_in_May), max(df_v1$Mildew_incidence_in_May), length.out = 100))
+
+# Add predictions and confidence intervals
+pred_data$pred <- predict(outcome.model, newdata = pred_data, type = "response")
+pred_data$se <- predict(outcome.model, newdata = pred_data, type = "response", se.fit = TRUE)
+pred_data$lower <- pred_data$pred - 1.96*pred_data$se
+pred_data$upper <- pred_data$pred + 1.96*pred_data$se
+
+# Export to CSV
+write.csv(pred_data, "pred_ingredient_noDT_June.csv", row.names = FALSE)
+
+# July
+test.mod <- ps.cont(Mildew_incidence_in_June~ Susceptibility_to_R6_strains+Susceptibility_to_non_R6_strains+
+                      Flag_shoot_incidence+Pruning+Initial_Strain+
+                      Quadrant+Synthetic_in_June+Nonsynthetic_in_June+Mixture_in_June, data = df_v1,
+                    n.trees = 500,
+                    shrinkage = 0.01,
+                    interaction.depth = 3,
+                    verbose = FALSE)
+
+
+plot(test.mod, plots="optimize")
+
+summary(test.mod)
+
+bal.table(test.mod, digits = 3)
+
+plot(test.mod, plots="es")
+
+library(survey)
+library(margins)  # For marginal effects
+
+df_v1$wts <- get.weights(test.mod) 
+design.ps <- svydesign(ids=~1, weights=~wts, data=df_v1) 
+
+outcome.model <- svyglm(Monthly_ingredient_July ~ Mildew_incidence_in_June, design = design.ps, 
+                        family = gaussian())
+summary(outcome.model)
+
+# Compute marginal effects
+marginal_effects <- margins(outcome.model)
+
+# View results
+summary(marginal_effects)
+
+# Predict log-odds for new data
+predicted <- predict(outcome.model, type = "response")
+
+
+# Generate predicted values and confidence intervals
+pred_data <- data.frame(
+  Mildew_incidence_in_June = seq(min(df_v1$Mildew_incidence_in_June), max(df_v1$Mildew_incidence_in_June), length.out = 100))
+
+# Add predictions and confidence intervals
+pred_data$pred <- predict(outcome.model, newdata = pred_data, type = "response")
+pred_data$se <- predict(outcome.model, newdata = pred_data, type = "response", se.fit = TRUE)
+pred_data$lower <- pred_data$pred - 1.96*pred_data$se
+pred_data$upper <- pred_data$pred + 1.96*pred_data$se
+
+# Export to CSV
+write.csv(pred_data, "pred_ingredient_noDT_July.csv", row.names = FALSE)
+
+
+# With DT
+# June
+test.mod <- ps.cont(Mildew_incidence_in_May~ Susceptibility_to_R6_strains+Susceptibility_to_non_R6_strains+
+                      Flag_shoot_incidence+Pruning+Initial_Strain+
+                      Degree_May_Jun+
+                      Quadrant+Synthetic_in_May+Nonsynthetic_in_May, data = df_v1,
+                    n.trees = 500,
+                    shrinkage = 0.01,
+                    interaction.depth = 3,
+                    verbose = FALSE)
+
+
+plot(test.mod, plots="optimize")
+
+summary(test.mod)
+
+bal.table(test.mod, digits = 3)
+
+plot(test.mod, plots="es")
+
+library(survey)
+library(margins)  # For marginal effects
+
+df_v1$wts <- get.weights(test.mod) 
+design.ps <- svydesign(ids=~1, weights=~wts, data=df_v1) 
+
+outcome.model <- svyglm(Monthly_ingredient_June ~ Mildew_incidence_in_May, design = design.ps, 
+                        family = gaussian())
+summary(outcome.model)
+
+# Compute marginal effects
+marginal_effects <- margins(outcome.model)
+
+# View results
+summary(marginal_effects)
+
+# Predict log-odds for new data
+predicted <- predict(outcome.model, type = "response")
+
+
+# Generate predicted values and confidence intervals
+pred_data <- data.frame(
+  Mildew_incidence_in_May = seq(min(df_v1$Mildew_incidence_in_May), max(df_v1$Mildew_incidence_in_May), length.out = 100))
+
+# Add predictions and confidence intervals
+pred_data$pred <- predict(outcome.model, newdata = pred_data, type = "response")
+pred_data$se <- predict(outcome.model, newdata = pred_data, type = "response", se.fit = TRUE)
+pred_data$lower <- pred_data$pred - 1.96*pred_data$se
+pred_data$upper <- pred_data$pred + 1.96*pred_data$se
+
+
+# Export to CSV
+write.csv(pred_data, "pred_ingredient_withDT_June.csv", row.names = FALSE)
+
+
+
+# July
+test.mod <- ps.cont(Mildew_incidence_in_June~ Susceptibility_to_R6_strains+Susceptibility_to_non_R6_strains+
+                      Flag_shoot_incidence+Pruning+Initial_Strain+
+                      Degree_Jun_Jul+
+                      Quadrant+Synthetic_in_June+Nonsynthetic_in_June+Mixture_in_June, data = df_v1,
+                    n.trees = 500,
+                    shrinkage = 0.01,
+                    interaction.depth = 3,
+                    verbose = FALSE)
+
+
+plot(test.mod, plots="optimize")
+
+summary(test.mod)
+
+bal.table(test.mod, digits = 3)
+
+plot(test.mod, plots="es")
+
+library(survey)
+library(margins)  # For marginal effects
+
+df_v1$wts <- get.weights(test.mod) 
+design.ps <- svydesign(ids=~1, weights=~wts, data=df_v1) 
+
+outcome.model <- svyglm(Monthly_ingredient_July ~ Mildew_incidence_in_June, design = design.ps, 
+                        family = gaussian())
+summary(outcome.model)
+
+# Compute marginal effects
+marginal_effects <- margins(outcome.model)
+
+# View results
+summary(marginal_effects)
+
+# Predict log-odds for new data
+predicted <- predict(outcome.model, type = "response")
+
+
+# Generate predicted values and confidence intervals
+pred_data <- data.frame(
+  Mildew_incidence_in_June = seq(min(df_v1$Mildew_incidence_in_June), max(df_v1$Mildew_incidence_in_June), length.out = 100))
+
+# Add predictions and confidence intervals
+pred_data$pred <- predict(outcome.model, newdata = pred_data, type = "response")
+pred_data$se <- predict(outcome.model, newdata = pred_data, type = "response", se.fit = TRUE)
+pred_data$lower <- pred_data$pred - 1.96*pred_data$se
+pred_data$upper <- pred_data$pred + 1.96*pred_data$se
+
+# Export to CSV
+write.csv(pred_data, "pred_ingredient_withDT_July.csv", row.names = FALSE)
