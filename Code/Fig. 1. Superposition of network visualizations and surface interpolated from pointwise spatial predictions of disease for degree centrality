@@ -1,951 +1,326 @@
-library(tigris)
-library(tidyverse)
-library(sf)
-options(tigris_use_cache = TRUE)
+SPILLOVER_CSV <- ".../Powdery_spillover_v7_with_median_kmh.csv"
+COST_CSV      <- ".../cost_data_v3.csv"
+OUT_PNG       <- "powdery_spillover_incidence.png"
 
-library(tidycensus)
-library(mapview)
-library(leaflet)
-library(tidyverse)
-library(mapview)
-library(sf)
-library(RColorBrewer)
+# Distance kernel is fixed to the power form  K(d) = (1 + d)^(-alpha).
 
-# Northwest
-# 2014
+PLOT_YEARS    <- NULL          # NULL = all years; or e.g. 2014 / c(2014,2015)
+GRID_N        <- 160
+GRID_PAD_KM   <- 1.0
+MAX_SURFACE_P <- NA
+SHOW_SURFACE  <- FALSE
+SURFACE_SCALE <- 1
 
-weather <- read.csv(".../Powdery_spillover_latlong_2014_v2_NW_github.csv", check.names=FALSE)
+EDGE_REL_THRESH <- 0.05        # keep edges >= 5% of the panel's strongest edge
 
-hop_sites <- tibble(
-  sites_id = 1:33,
-  longitude = c(-122.8832,
-                -122.9142,
-                -122.8855,
-                -122.8751,
-                -122.8792,
-                -122.9058,
-                -122.8815,
-                -122.8885,
-                -122.8464,
-                -122.8443,
-                -122.8455,
-                -122.8464,
-                -122.845,
-                -122.8433,
-                -122.8399,
-                -122.8353,
-                -122.8307,
-                -122.8266,
-                -122.83,
-                -122.8564,
-                -122.8533,
-                -122.7797,
-                -122.7852,
-                -122.7861,
-                -122.7851,
-                -122.786,
-                -122.7811,
-                -122.7928,
-                -122.7802,
-                -122.78,
-                -122.791,
-                -122.791,
-                -122.7907
-  ),
-  latitude = c(45.1684,
-               45.2005,
-               45.1654,
-               45.1653,
-               45.1672,
-               45.1685,
-               45.1653,
-               45.1659,
-               45.1996,
-               45.2025,
-               45.1173,
-               45.1174,
-               45.1173,
-               45.1177,
-               45.1179,
-               45.1177,
-               45.1177,
-               45.1176,
-               45.1137,
-               45.1144,
-               45.1126,
-               45.1964,
-               45.1931,
-               45.1898,
-               45.1962,
-               45.1864,
-               45.1863,
-               45.1905,
-               45.1897,
-               45.1986,
-               45.1879,
-               45.1888,
-               45.1865
-  )
+# --- Node fill for the map: "incentrality" (adapted-model quantity of
+#     interest) or "incidence" (previous behaviour). ---------------------
+NODE_FILL <- "incidence"       # "incentrality" | "incidence"
+
+## ---------------- Adjacency-matrix indicator coding ------------------
+## Eq. 3 indicators, per yard-year:
+##   c = 1  if cultivar is R6      (else 0 = non-R6)
+##   v = 1  if initial strain is V6 (else 0 = non-V6)
+## Eq. 4 directed adjacency (source j -> target i):
+##   A_ij = 1  if  v_j == 1   OR   (c_i == 0 AND c_j == 0)
+##        = 0  otherwise
+##
+## The two rules below are the ONLY place cultivar/strain are defined.
+## Edit them if your data dictionary differs.
+##
+## NOTE / DATA CHECK: with V6_STRAIN_CODES = c(1) only 18 of 464 yard-
+## years are V6, which is far below the ~45% V6 share reported in the
+## paper's Table 4. If "Initial Strain" uses a different code for V6
+## (the column also contains the value 2), change V6_STRAIN_CODES here,
+## e.g. c(1, 2). Nothing else needs to change.
+is_R6_cultivar <- function(df) {
+  # R6 cultivar == resistant to non-R6 races == susceptibility 0
+  as.numeric(df[["Susceptibility to non-R6 Strains"]]) == 0
+}
+V6_STRAIN_CODES <- c(1)
+is_V6_strain <- function(df) {
+  as.numeric(df[["Initial Strain"]]) %in% V6_STRAIN_CODES
+}
+
+set.seed(1)
+
+## ------------------------------ Packages -----------------------------
+suppressPackageStartupMessages({
+  library(ggplot2)
+  library(dplyr)
+  library(tidyr)
+  library(viridisLite)
+  library(scales)
+})
+
+## ---- posterior parameter estimates (only beta and alpha are used) ----
+table4 <- tibble::tribble(
+  ~month, ~beta,   ~delta,  ~gamma,  ~alpha,  ~eta1,  ~eta2,
+  "jun",  -2.702,  7.4, 2.52, 1.94, 0.095, 0.32,
+  "jul",  -3.438, 4.94, 0.173, 1.03, 0.121, 0.51,
 )
 
-
-
-Disease_incidence <- hop_sites %>%
-  st_as_sf(coords = c("longitude", "latitude"),
-           crs = 4326) %>%
-  st_transform(6440)
-
-
-
-Degree_centrality <- hop_sites %>%
-  st_as_sf(coords = c("longitude", "latitude"),
-           crs = 4326) %>%
-  st_transform(6440)
-
-
-Disease_incidence <- subset(Disease_incidence, select = -sites_id)
-Degree_centrality <- subset(Degree_centrality, select = -sites_id)
-
-
-
-# April
-# Network 1
-
-
-Disease_incidence$DiseaseinApril <- weather$DiseaseinApril
-Degree_centrality$Weighted_dc_aprmay1 <- weather$Weighted_dc_aprmay1
-
-# https://r-spatial.github.io/mapview/articles/mapview_02-advanced.html
-map <- mapview(Disease_incidence, ycol = "DiseaseinApril",  
-               col.regions=brewer.pal(5, "Accent"),lwd = 0.000,
-               legend = TRUE) + 
-  mapview(Degree_centrality, cex = "Weighted_dc_aprmay1", lwd = 2, 
-          col.regions=brewer.pal(5, "Accent"), alpha.regions = 0.00000000000000001,
-          legend = FALSE)
-
-
-# Add a title to the map
-map@map <- map@map %>%
-  addControl("<h2>2014 April Network 1 </h2>", position = "bottomleft", className = "map-title")
-
-map
-
-# Network 2
-
-Disease_incidence$DiseaseinApril <- weather$DiseaseinApril
-Degree_centrality$Weighted_dc_aprmay2 <- weather$Weighted_dc_aprmay2
-
-# https://r-spatial.github.io/mapview/articles/mapview_02-advanced.html
-map <- mapview(Disease_incidence, ycol = "DiseaseinApril",  
-               col.regions=brewer.pal(5, "Accent"),lwd = 0.000,
-               legend = TRUE) + 
-  mapview(Degree_centrality, cex = "Weighted_dc_aprmay2", lwd = 2, 
-          col.regions=brewer.pal(5, "Accent"), alpha.regions = 0.00000000000000001,
-          legend = FALSE)
-
-
-# Add a title to the map
-map@map <- map@map %>%
-  addControl("<h2>2014 April Network 2 </h2>", position = "bottomleft", className = "map-title")
-
-map
-
-
-
-# May
-# Network 1
-
-
-Disease_incidence$DiseaseinMay <- weather$DiseaseinMay
-Degree_centrality$Weighted_dc_mayjun1 <- weather$Weighted_dc_mayjun1
-
-
-# https://r-spatial.github.io/mapview/articles/mapview_02-advanced.html
-map <- mapview(Disease_incidence, ycol = "DiseaseinMay",  
-               col.regions=brewer.pal(5, "Accent"),lwd = 0.000,
-               legend = TRUE) + 
-  mapview(Degree_centrality, cex = "Weighted_dc_mayjun1", lwd = 2, 
-          col.regions=brewer.pal(5, "Accent"), alpha.regions = 0.00000000000000001,
-          legend = FALSE)
-
-
-# Add a title to the map
-map@map <- map@map %>%
-  addControl("<h2>2014 May Network 1 </h2>", position = "bottomleft", className = "map-title")
-
-map
-
-
-# Network 2
-
-Disease_incidence$DiseaseinMay <- weather$DiseaseinMay
-Degree_centrality$Weighted_dc_mayjun2 <- weather$Weighted_dc_mayjun2
-
-
-
-# https://r-spatial.github.io/mapview/articles/mapview_02-advanced.html
-map <- mapview(Disease_incidence, ycol = "DiseaseinMay",  
-               col.regions=brewer.pal(5, "Accent"),lwd = 0.000,
-               legend = TRUE) + 
-  mapview(Degree_centrality, cex = "Weighted_dc_mayjun2", lwd = 2, 
-          col.regions=brewer.pal(5, "Accent"), alpha.regions = 0.00000000000000001,
-          legend = FALSE)
-
-
-# Add a title to the map
-map@map <- map@map %>%
-  addControl("<h2>2014 May Network 2 </h2>", position = "bottomleft", className = "map-title")
-
-map
-
-# June 
-
-
-# Network 1
-
-Disease_incidence$DiseaseinJune <- weather$DiseaseinJune
-Degree_centrality$Weighted_dc_junjul1 <- weather$Weighted_dc_junjul1
-
-
-# https://r-spatial.github.io/mapview/articles/mapview_02-advanced.html
-map <- mapview(Disease_incidence, ycol = "DiseaseinJune",  
-               col.regions=brewer.pal(5, "Accent"),lwd = 0.000,
-               legend = TRUE) + 
-  mapview(Degree_centrality, cex = "Weighted_dc_junjul1", lwd = 2, 
-          col.regions=brewer.pal(5, "Accent"), alpha.regions = 0.00000000000000001,
-          legend = FALSE)
-
-
-# Add a title to the map
-map@map <- map@map %>%
-  addControl("<h2>2014 June Network 1 </h2>", position = "bottomleft", className = "map-title")
-
-map
-
-
-# Network 2
-
-Disease_incidence$DiseaseinJune <- weather$DiseaseinJune
-Degree_centrality$Weighted_dc_junjul2 <- weather$Weighted_dc_junjul2
-
-# https://r-spatial.github.io/mapview/articles/mapview_02-advanced.html
-map <- mapview(Disease_incidence, ycol = "DiseaseinJune",  
-               col.regions=brewer.pal(5, "Accent"),lwd = 0.000,
-               legend = TRUE) + 
-  mapview(Degree_centrality, cex = "Weighted_dc_junjul2", lwd = 2, 
-          col.regions=brewer.pal(5, "Accent"), alpha.regions = 0.00000000000000001,
-          legend = FALSE)
-
-
-# Add a title to the map
-map@map <- map@map %>%
-  addControl("<h2>2014 June Network 2 </h2>", position = "bottomleft", className = "map-title")
-
-map
-
-
-# 2015
-
-
-weather <- read.csv(".../Powdery_spillover_latlong_2015_v2_NW_github.csv", check.names=FALSE)
-
-
-hop_sites <- tibble(
-  sites_id = 1:34,
-  longitude = c(-122.8832,
-                -122.9142,
-                -122.8855,
-                -122.8751,
-                -122.8792,
-                -122.8792,
-                -122.9058,
-                -122.8815,
-                -122.8885,
-                -122.8464,
-                -122.8443,
-                -122.8455,
-                -122.8464,
-                -122.845,
-                -122.8433,
-                -122.8399,
-                -122.8353,
-                -122.8307,
-                -122.8266,
-                -122.83,
-                -122.8564,
-                -122.8533,
-                -122.7755,
-                -122.7797,
-                -122.7852,
-                -122.7861,
-                -122.7851,
-                -122.786,
-                -122.7811,
-                -122.7928,
-                -122.7802,
-                -122.78,
-                -122.7910425,
-                -122.7907
-  ),
-  latitude = c(45.1684,
-               45.2005,
-               45.1654,
-               45.1653,
-               45.1672,
-               45.1675,
-               45.1685,
-               45.1653,
-               45.1659,
-               45.1996,
-               45.2025,
-               45.1173,
-               45.1174,
-               45.1173,
-               45.1177,
-               45.1179,
-               45.1177,
-               45.1177,
-               45.1176,
-               45.1137,
-               45.1144,
-               45.1126,
-               45.1889,
-               45.1964,
-               45.1931,
-               45.1898,
-               45.1962,
-               45.1864,
-               45.1863,
-               45.1905,
-               45.1897,
-               45.1986,
-               45.18827534,
-               45.1865
-  )
+transitions <- tibble::tribble(
+  ~transition,  ~label,          ~dc_col,              ~month, ~incidence_col,
+  "mayjun",     "May → June",   "Weighted_dc_mayjun", "jun",  "DiseaseinMay",
+  "junjul",     "June → July",  "Weighted_dc_junjul", "jul",  "DiseaseinJune"
 )
 
+params <- transitions %>%
+  left_join(table4 %>% select(month, beta, alpha), by = "month")
 
+message("Kernel: (1 + d)^(-alpha)")
+message("Adjacency: A_ij = 1 if v_j==1 OR (c_i==0 & c_j==0)  [Eq. 4]")
+print(params[, c("transition", "label", "month", "beta", "alpha")])
 
-Disease_incidence <- hop_sites %>%
-  st_as_sf(coords = c("longitude", "latitude"),
-           crs = 4326) %>%
-  st_transform(6440)
+## ------------------------------ Helpers ------------------------------
+inv_logit  <- function(x) 1 / (1 + exp(-x))
+kernel_fun <- function(d, alpha) (1 + d)^(-alpha)
 
+to_km <- function(lat, lon, lat0, lon0) {
+  x <- (lon - lon0) * 111.320 * cos(lat0 * pi / 180)  # east (km)
+  y <- (lat - lat0) * 110.574                         # north (km)
+  cbind(x = x, y = y)
+}
 
+## ------------------------------ Load data ----------------------------
+spill <- read.csv(SPILLOVER_CSV, check.names = FALSE, stringsAsFactors = FALSE)
+cost  <- read.csv(COST_CSV,      check.names = FALSE, stringsAsFactors = FALSE)
 
-Degree_centrality <- hop_sites %>%
-  st_as_sf(coords = c("longitude", "latitude"),
-           crs = 4326) %>%
-  st_transform(6440)
+# Eq. 3 indicators on the spillover file (one row per yard-year here).
+spill$c_ind <- as.integer(is_R6_cultivar(spill))   # 1 = R6 cultivar
+spill$v_ind <- as.integer(is_V6_strain(spill))     # 1 = V6 strain
+message(sprintf("Indicators: R6 cultivars = %d / %d ; V6 strain = %d / %d",
+                sum(spill$c_ind), nrow(spill),
+                sum(spill$v_ind), nrow(spill)))
 
+# Geography: one row per (Field ID, Year).
+geo <- cost %>%
+  select(`Field ID`, Year,
+         lat = `Centroid Lat`, lon = `Centroid Long`, area = Area_Hectares) %>%
+  filter(!is.na(lat), !is.na(lon), !is.na(area)) %>%
+  distinct(`Field ID`, Year, .keep_all = TRUE)
 
-Disease_incidence <- subset(Disease_incidence, select = -sites_id)
-Degree_centrality <- subset(Degree_centrality, select = -sites_id)
+dat <- spill %>% left_join(geo, by = c("Field ID", "Year"))
 
+missing_geo <- sum(is.na(dat$lat) | is.na(dat$lon))
+if (missing_geo > 0) {
+  warning(missing_geo, " of ", nrow(dat),
+          " yard-years have no coordinate match and are dropped from the map.")
+}
+dat <- dat %>% filter(!is.na(lat), !is.na(lon), !is.na(area))
 
+if (!is.null(PLOT_YEARS)) {
+  dat <- dat %>% filter(Year %in% PLOT_YEARS)
+  if (nrow(dat) == 0) stop("No rows left after filtering to PLOT_YEARS = ",
+                           paste(PLOT_YEARS, collapse = ", "))
+}
 
-# April
-# Network 1
+years <- sort(unique(dat$Year))
+LAT0 <- mean(dat$lat); LON0 <- mean(dat$lon)
 
-Disease_incidence$DiseaseinApril <- weather$DiseaseinApril
-Degree_centrality$Weighted_dc_aprmay1 <- weather$Weighted_dc_aprmay1
+## ------ per-panel layers (surface, edges, points, centrality) --------
+surface_list <- list(); edge_list <- list()
+point_list   <- list(); central_list <- list()
 
+for (yr in years) {
+  dy <- dat %>% filter(Year == yr)
+  if (nrow(dy) == 0) next
 
-# https://r-spatial.github.io/mapview/articles/mapview_02-advanced.html
-map <- mapview(Disease_incidence, ycol = "DiseaseinApril",  
-               col.regions=brewer.pal(5, "Accent"),lwd = 0.000,
-               legend = TRUE) + 
-  mapview(Degree_centrality, cex = "Weighted_dc_aprmay1", lwd = 2, 
-          col.regions=brewer.pal(5, "Accent"), alpha.regions = 0.00000000000000001,
-          legend = FALSE)
+  xy    <- to_km(dy$lat, dy$lon, LAT0, LON0)
+  dy$xk <- xy[, "x"]; dy$yk <- xy[, "y"]
 
+  for (k in seq_len(nrow(params))) {
+    tr   <- params$transition[k]
+    lbl  <- params$label[k]
+    beta <- params$beta[k]
+    alph <- params$alpha[k]
+    dccol  <- params$dc_col[k]
+    inccol <- params$incidence_col[k]
 
-# Add a title to the map
-map@map <- map@map %>%
-  addControl("<h2>2015 April Network 1 </h2>", position = "bottomleft", className = "map-title")
+    S   <- suppressWarnings(as.numeric(dy[[dccol]])); S[is.na(S)] <- 0
+    inc <- suppressWarnings(as.numeric(dy[[inccol]]))
 
-map
+    panel_pts <- data.frame(
+      Year = yr, transition = tr, label = lbl,
+      `Field ID` = dy$`Field ID`,
+      x  = dy$lon, y  = dy$lat,      # PLOT coords = real lon / lat
+      xk = dy$xk,  yk = dy$yk,       # km coords for distance math only
+      area = dy$area, incidence = inc, S = S,
+      c_ind = dy$c_ind, v_ind = dy$v_ind,
+      lat = dy$lat, lon = dy$lon,
+      stringsAsFactors = FALSE, check.names = FALSE
+    )
 
-# Network 2
+    # --- FULL directed weight matrix W (targets i in rows, sources j in cols)
+    #     including the adjacency mask A_ij, over ALL yards in the panel.
+    np <- nrow(panel_pts)
+    exx  <- outer(panel_pts$xk, panel_pts$xk, "-")   # i - j (km), targets x sources
+    eyy  <- outer(panel_pts$yk, panel_pts$yk, "-")
+    dall <- sqrt(exx^2 + eyy^2)                       # d_ij, np x np
 
-Disease_incidence$DiseaseinApril <- weather$DiseaseinApril
-Degree_centrality$Weighted_dc_aprmay2 <- weather$Weighted_dc_aprmay2
+    Kd   <- kernel_fun(dall, alph)                    # (1 + d_ij)^(-alpha)
+    Wsrc <- matrix(panel_pts$S, nrow = np, ncol = np, byrow = TRUE)  # Weighted_dc_j
 
+    # Adjacency A_ij = 1 if v_j==1 OR (c_i==0 & c_j==0)   [Eq. 4]
+    v_j   <- matrix(panel_pts$v_ind, nrow = np, ncol = np, byrow = TRUE)
+    c_j   <- matrix(panel_pts$c_ind, nrow = np, ncol = np, byrow = TRUE)
+    c_i   <- matrix(panel_pts$c_ind, nrow = np, ncol = np, byrow = FALSE)
+    A     <- ((v_j == 1) | ((c_i == 0) & (c_j == 0))) * 1L
 
-# https://r-spatial.github.io/mapview/articles/mapview_02-advanced.html
-map <- mapview(Disease_incidence, ycol = "DiseaseinMay",  
-               col.regions=brewer.pal(5, "Accent"),lwd = 0.000,
-               legend = TRUE) + 
-  mapview(Degree_centrality, cex = "Weighted_dc_aprmay2", lwd = 2, 
-          col.regions=brewer.pal(5, "Accent"), alpha.regions = 0.00000000000000001,
-          legend = FALSE)
+    W <- A * Wsrc * Kd            # w_ij = A_ij * Weighted_dc_j * K(d_ij)  [Eq. 6]
+    diag(W) <- 0                  # no self-edge; auto-infection is a separate term
 
+    # --- INCOMING centrality of each target i: row sum of W ------------
+    panel_pts$in_centrality <- rowSums(W)
+    point_list[[length(point_list) + 1L]]     <- panel_pts
+    central_list[[length(central_list) + 1L]] <- panel_pts[, c(
+      "Year", "transition", "label", "Field ID", "c_ind", "v_ind",
+      "area", "incidence", "in_centrality")]
 
-# Add a title to the map
-map@map <- map@map %>%
-  addControl("<h2>2015 April Network 2 </h2>", position = "bottomleft", className = "map-title")
+    # --- SURFACE (optional display only) ------------------------------
+    src <- panel_pts[panel_pts$S > 0, , drop = FALSE]
+    pad_lat <- GRID_PAD_KM / 110.574
+    pad_lon <- GRID_PAD_KM / (111.320 * cos(LAT0 * pi / 180))
+    lonr <- range(panel_pts$x) + c(-pad_lon, pad_lon)
+    latr <- range(panel_pts$y) + c(-pad_lat, pad_lat)
+    glon <- seq(lonr[1], lonr[2], length.out = GRID_N)
+    glat <- seq(latr[1], latr[2], length.out = GRID_N)
+    grid <- expand.grid(x = glon, y = glat)
+    if (nrow(src) > 0) {
+      gkm  <- to_km(grid$y, grid$x, LAT0, LON0)
+      dxx  <- outer(gkm[, "x"], src$xk, "-")
+      dyy  <- outer(gkm[, "y"], src$yk, "-")
+      dmat <- sqrt(dxx^2 + dyy^2)
+      spread <- SURFACE_SCALE * as.vector(kernel_fun(dmat, alph) %*% src$S)
+    } else spread <- rep(0, nrow(grid))
+    grid$p <- inv_logit(beta + spread)
+    grid$Year <- yr; grid$transition <- tr; grid$label <- lbl
+    surface_list[[length(surface_list) + 1L]] <- grid
 
-map
+    # --- EDGES for drawing: keep A_ij-masked edges >= threshold -------
+    wmax <- suppressWarnings(max(W[dall > 0]))
+    if (is.finite(wmax) && wmax > 0) {
+      idx <- which(W >= EDGE_REL_THRESH * wmax & dall > 0, arr.ind = TRUE)
+      if (nrow(idx) > 0) {
+        ed <- data.frame(
+          Year = yr, transition = tr, label = lbl,
+          x    = panel_pts$x[idx[, 2]], y    = panel_pts$y[idx[, 2]],   # source j
+          xend = panel_pts$x[idx[, 1]], yend = panel_pts$y[idx[, 1]],   # target i
+          w    = W[idx],
+          stringsAsFactors = FALSE
+        )
+        edge_list[[length(edge_list) + 1L]] <- ed
+      }
+    }
+  }
+}
 
+surface_df <- bind_rows(surface_list)
+points_df  <- bind_rows(point_list)
+central_df <- bind_rows(central_list)
+edges_df   <- if (length(edge_list)) bind_rows(edge_list) else
+              data.frame(Year = integer(), transition = character(),
+                         label = character(), x = numeric(), y = numeric(),
+                         xend = numeric(), yend = numeric(), w = numeric())
 
-# May
-# Network 1
+## ----------------------- write new results table ---------------------
+write.csv(central_df, OUT_CENTRAL, row.names = FALSE)
+message("Wrote ", OUT_CENTRAL, " (", nrow(central_df), " rows)")
 
+## ------------------------- facet ordering ----------------------------
+lvl <- params$label[match(c("aprmay", "mayjun", "junjul"), params$transition)]
+lvl <- lvl[!is.na(lvl)]
+surface_df$label <- factor(surface_df$label, levels = lvl)
+points_df$label  <- factor(points_df$label,  levels = lvl)
+if (nrow(edges_df)) edges_df$label <- factor(edges_df$label, levels = lvl)
 
-Disease_incidence$DiseaseinMay <- weather$DiseaseinMay
-Degree_centrality$Weighted_dc_mayjun1 <- weather$Weighted_dc_mayjun1
+surface_df$Year <- factor(surface_df$Year, levels = years)
+points_df$Year  <- factor(points_df$Year,  levels = years)
+if (nrow(edges_df)) edges_df$Year <- factor(edges_df$Year, levels = years)
 
+## -------- collapse edge weight into 3 levels (Low/Medium/High) -------
+EDGE_LEVEL_LABELS <- c("Low", "Medium", "High")
+edge_level_key    <- EDGE_LEVEL_LABELS
+if (nrow(edges_df)) {
+  br <- unique(quantile(edges_df$w, probs = c(1/3, 2/3), names = FALSE))
+  edges_df$w_level <- cut(edges_df$w, breaks = c(-Inf, br, Inf),
+                          labels = EDGE_LEVEL_LABELS[seq_len(length(br) + 1)],
+                          include.lowest = TRUE)
+  edges_df$w_level <- factor(edges_df$w_level, levels = EDGE_LEVEL_LABELS)
+  if (length(br) == 2) {
+    fmt <- function(z) formatC(z, format = "e", digits = 1)
+    edge_level_key <- c(
+      paste0("Low (< ",  fmt(br[1]), ")"),
+      paste0("Medium (", fmt(br[1]), " to ", fmt(br[2]), ")"),
+      paste0("High (> ", fmt(br[2]), ")")
+    )
+  }
+}
 
-# https://r-spatial.github.io/mapview/articles/mapview_02-advanced.html
-map <- mapview(Disease_incidence, ycol = "DiseaseinMay",  
-               col.regions=brewer.pal(5, "Accent"),lwd = 0.000,
-               legend = TRUE) + 
-  mapview(Degree_centrality, cex = "Weighted_dc_mayjun1", lwd = 2, 
-          col.regions=brewer.pal(5, "Accent"), alpha.regions = 0.00000000000000001,
-          legend = FALSE)
+## ------------------------------- Plot --------------------------------
+fill_limits <- if (is.na(MAX_SURFACE_P)) c(0, max(surface_df$p, na.rm = TRUE)) else
+               c(0, MAX_SURFACE_P)
+panel_fill  <- if (SHOW_SURFACE) "grey95" else "white"
 
+use_incentral <- identical(NODE_FILL, "incentrality")
+points_df$node_fill <- if (use_incentral) points_df$in_centrality else
+                                          points_df$incidence
+node_fill_name <- if (use_incentral) "Incoming\ncentrality" else "Observed\nincidence"
 
-# Add a title to the map
-map@map <- map@map %>%
-  addControl("<h2>2015 May Network 1 </h2>", position = "bottomleft", className = "map-title")
-
-map
-
-
-# Network 2
-
-Disease_incidence$DiseaseinMay <- weather$DiseaseinMay
-Degree_centrality$Weighted_dc_mayjun2 <- weather$Weighted_dc_mayjun2
-
-
-# https://r-spatial.github.io/mapview/articles/mapview_02-advanced.html
-map <- mapview(Disease_incidence, ycol = "DiseaseinMay",  
-               col.regions=brewer.pal(5, "Accent"),lwd = 0.000,
-               legend = TRUE) + 
-  mapview(Degree_centrality, cex = "Weighted_dc_mayjun2", lwd = 2, 
-          col.regions=brewer.pal(5, "Accent"), alpha.regions = 0.00000000000000001,
-          legend = FALSE)
-
-
-# Add a title to the map
-map@map <- map@map %>%
-  addControl("<h2>2015 May Network 2 </h2>", position = "bottomleft", className = "map-title")
-
-map
-
-# June 
-
-# Network 1
-
-Disease_incidence$DiseaseinJune <- weather$DiseaseinJune
-Degree_centrality$Weighted_dc_junjul1 <- weather$Weighted_dc_junjul1
-
-
-# https://r-spatial.github.io/mapview/articles/mapview_02-advanced.html
-map <- mapview(Disease_incidence, ycol = "DiseaseinJune",  
-               col.regions=brewer.pal(5, "Accent"),lwd = 0.000,
-               legend = TRUE) + 
-  mapview(Degree_centrality, cex = "Weighted_dc_junjul1", lwd = 2, 
-          col.regions=brewer.pal(5, "Accent"), alpha.regions = 0.00000000000000001,
-          legend = FALSE)
-
-
-# Add a title to the map
-map@map <- map@map %>%
-  addControl("<h2>2015 June Network 1 </h2>", position = "bottomleft", className = "map-title")
-
-map
-
-# Network 2
-
-Disease_incidence$DiseaseinJune <- weather$DiseaseinJune
-Degree_centrality$Weighted_dc_junjul2 <- weather$Weighted_dc_junjul2
-
-
-# https://r-spatial.github.io/mapview/articles/mapview_02-advanced.html
-map <- mapview(Disease_incidence, ycol = "DiseaseinJune",  
-               col.regions=brewer.pal(5, "Accent"),lwd = 0.000,
-               legend = TRUE) + 
-  mapview(Degree_centrality, cex = "Weighted_dc_junjul2", lwd = 2, 
-          col.regions=brewer.pal(5, "Accent"), alpha.regions = 0.00000000000000001,
-          legend = FALSE)
-
-
-# Add a title to the map
-map@map <- map@map %>%
-  addControl("<h2>2015 June Network 2 </h2>", position = "bottomleft", className = "map-title")
-
-map
-
-
-
-
-# 2016
-
-
-weather <- read.csv(".../Powdery_spillover_latlong_2016_v2_NW_github.csv", check.names=FALSE)
-
-
-hop_sites <- tibble(
-  sites_id = 1:30,
-  longitude = c(-122.845,
-                -122.8832,
-                -122.9142,
-                -122.8855,
-                -122.8751,
-                -122.8792,
-                -122.8792,
-                -122.9058,
-                -122.8815,
-                -122.8885,
-                -122.8455,
-                -122.8464,
-                -122.8443,
-                -122.8455,
-                -122.8464,
-                -122.845,
-                -122.8433,
-                -122.8399,
-                -122.8353,
-                -122.83,
-                -122.7797,
-                -122.7852,
-                -122.7861,
-                -122.7851,
-                -122.7811,
-                -122.7928,
-                -122.7802,
-                -122.78,
-                -122.791,
-                -122.7907
-  ),
-  latitude = c(45.195,
-               45.1684,
-               45.2005,
-               45.1654,
-               45.1653,
-               45.1672,
-               45.1675,
-               45.1685,
-               45.1653,
-               45.1659,
-               45.199,
-               45.1996,
-               45.2025,
-               45.1173,
-               45.1174,
-               45.1173,
-               45.1177,
-               45.1179,
-               45.1177,
-               45.1137,
-               45.1964,
-               45.1931,
-               45.1898,
-               45.1962,
-               45.1863,
-               45.1905,
-               45.1897,
-               45.1986,
-               45.1883,
-               45.1865
+p <- ggplot() +
+  { if (SHOW_SURFACE)
+      geom_tile(data = surface_df, aes(x = x, y = y, fill = p)) } +
+  { if (SHOW_SURFACE)
+      scale_fill_viridis_c(name = "Pr(disease)", option = "viridis",
+                           limits = fill_limits, oob = scales::squish) } +
+  { if (nrow(edges_df))
+      geom_segment(data = edges_df,
+                   aes(x = x, y = y, xend = xend, yend = yend,
+                       colour = w_level, linewidth = w_level),
+                   alpha = 0.55, lineend = "round") } +
+  scale_colour_manual(name = "Edge weight",
+                      values = c(Low = "#1b9e77", Medium = "#d95f02", High = "#7570b3"),
+                      labels = edge_level_key) +
+  scale_linewidth_manual(name = "Edge weight",
+                         values = c(Low = 0.25, Medium = 0.40, High = 0.60),
+                         labels = edge_level_key) +
+  geom_point(data = points_df,
+             aes(x = x, y = y, size = area, fill = node_fill),
+             shape = 21, stroke = 0.4, colour = "grey35") +
+  { if (use_incentral)
+      scale_fill_viridis_c(name = node_fill_name, option = "plasma",
+                           limits = c(0, max(points_df$node_fill, na.rm = TRUE)),
+                           oob = scales::squish)
+    else
+      scale_fill_gradientn(name = node_fill_name,
+                           colours = c("#2c7bb6", "#ffffbf", "#d7191c"),
+                           limits = c(0, 1), oob = scales::squish) } +
+  scale_size_area(name = "Yard area (ha)", max_size = 3.6) +
+  facet_grid(Year ~ label, switch = "y") +
+  coord_fixed(ratio = 1 / cos(LAT0 * pi / 180), expand = TRUE) +
+  scale_x_continuous(labels = function(v) sprintf("%.2f", v)) +
+  scale_y_continuous(labels = function(v) sprintf("%.2f", v)) +
+  labs(x = "Longitude", y = "Latitude") +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid = element_blank(),
+    panel.background = element_rect(fill = panel_fill, colour = NA),
+    panel.border = element_rect(fill = NA, colour = "grey80"),
+    panel.spacing = unit(0.4, "lines"),
+    strip.text = element_text(face = "bold"),
+    strip.placement = "outside",
+    legend.position = "right",
+    plot.title = element_text(face = "bold")
   )
-)
 
-
-
-Disease_incidence <- hop_sites %>%
-  st_as_sf(coords = c("longitude", "latitude"),
-           crs = 4326) %>%
-  st_transform(6440)
-
-
-
-Degree_centrality <- hop_sites %>%
-  st_as_sf(coords = c("longitude", "latitude"),
-           crs = 4326) %>%
-  st_transform(6440)
-
-
-Disease_incidence <- subset(Disease_incidence, select = -sites_id)
-Degree_centrality <- subset(Degree_centrality, select = -sites_id)
-
-
-
-# April
-# Network 1
-
-
-Disease_incidence$DiseaseinApril <- weather$DiseaseinApril
-Degree_centrality$Weighted_dc_aprmay1 <- weather$Weighted_dc_aprmay1
-
-
-# https://r-spatial.github.io/mapview/articles/mapview_02-advanced.html
-map <- mapview(Disease_incidence, ycol = "DiseaseinApril",  
-               col.regions=brewer.pal(5, "Accent"),lwd = 0.000,
-               legend = TRUE) + 
-  mapview(Degree_centrality, cex = "Weighted_dc_aprmay1", lwd = 2, 
-          col.regions=brewer.pal(5, "Accent"), alpha.regions = 0.00000000000000001,
-          legend = FALSE)
-
-
-# Add a title to the map
-map@map <- map@map %>%
-  addControl("<h2>2016 April Network 1 </h2>", position = "bottomleft", className = "map-title")
-
-map
-
-# Network 2
-
-Disease_incidence$DiseaseinApril <- weather$DiseaseinApril
-Degree_centrality$Weighted_dc_aprmay2 <- weather$Weighted_dc_aprmay2
-
-
-# https://r-spatial.github.io/mapview/articles/mapview_02-advanced.html
-map <- mapview(Disease_incidence, ycol = "DiseaseinApril",  
-               col.regions=brewer.pal(5, "Accent"),lwd = 0.000,
-               legend = TRUE) + 
-  mapview(Degree_centrality, cex = "Weighted_dc_aprmay2", lwd = 2, 
-          col.regions=brewer.pal(5, "Accent"), alpha.regions = 0.00000000000000001,
-          legend = FALSE)
-
-
-# Add a title to the map
-map@map <- map@map %>%
-  addControl("<h2>2016 April Network 2 </h2>", position = "bottomleft", className = "map-title")
-
-map
-
-
-
-
-# May
-# Network 1
-
-
-Disease_incidence$DiseaseinMay <- weather$DiseaseinMay
-Degree_centrality$Weighted_dc_mayjun1 <- weather$Weighted_dc_mayjun1
-
-
-
-# https://r-spatial.github.io/mapview/articles/mapview_02-advanced.html
-map <- mapview(Disease_incidence, ycol = "DiseaseinMay",  
-               col.regions=brewer.pal(5, "Accent"),lwd = 0.000,
-               legend = TRUE) + 
-  mapview(Degree_centrality, cex = "Weighted_dc_mayjun1", lwd = 2, 
-          col.regions=brewer.pal(5, "Accent"), alpha.regions = 0.00000000000000001,
-          legend = FALSE)
-
-
-# Add a title to the map
-map@map <- map@map %>%
-  addControl("<h2>2016 May Network 1 </h2>", position = "bottomleft", className = "map-title")
-
-map
-
-
-# Network 2
-
-Disease_incidence$DiseaseinMay <- weather$DiseaseinMay
-Degree_centrality$Weighted_dc_mayjun2 <- weather$Weighted_dc_mayjun2
-
-
-# https://r-spatial.github.io/mapview/articles/mapview_02-advanced.html
-map <- mapview(Disease_incidence, ycol = "DiseaseinMay",  
-               col.regions=brewer.pal(5, "Accent"),lwd = 0.000,
-               legend = TRUE) + 
-  mapview(Degree_centrality, cex = "Weighted_dc_mayjun2", lwd = 2, 
-          col.regions=brewer.pal(5, "Accent"), alpha.regions = 0.00000000000000001,
-          legend = FALSE)
-
-
-# Add a title to the map
-map@map <- map@map %>%
-  addControl("<h2>2016 May Network 2 </h2>", position = "bottomleft", className = "map-title")
-
-map
-
-# June 
-
-
-# Network 1
-
-Disease_incidence$DiseaseinJune <- weather$DiseaseinJune
-Degree_centrality$Weighted_dc_junjul1 <- weather$Weighted_dc_junjul1
-
-
-# https://r-spatial.github.io/mapview/articles/mapview_02-advanced.html
-map <- mapview(Disease_incidence, ycol = "DiseaseinJune",  
-               col.regions=brewer.pal(5, "Accent"),lwd = 0.000,
-               legend = TRUE) + 
-  mapview(Degree_centrality, cex = "Weighted_dc_junjul1", lwd = 2, 
-          col.regions=brewer.pal(5, "Accent"), alpha.regions = 0.00000000000000001,
-          legend = FALSE)
-
-
-# Add a title to the map
-map@map <- map@map %>%
-  addControl("<h2>2016 June Network 1 </h2>", position = "bottomleft", className = "map-title")
-
-map
-
-# Network 2
-
-Disease_incidence$DiseaseinJune <- weather$DiseaseinJune
-Degree_centrality$Weighted_dc_junjul2 <- weather$Weighted_dc_junjul2
-
-
-# https://r-spatial.github.io/mapview/articles/mapview_02-advanced.html
-map <- mapview(Disease_incidence, ycol = "DiseaseinJune",  
-               col.regions=brewer.pal(5, "Accent"),lwd = 0.000,
-               legend = TRUE) + 
-  mapview(Degree_centrality, cex = "Weighted_dc_junjul2", lwd = 2, 
-          col.regions=brewer.pal(5, "Accent"), alpha.regions = 0.00000000000000001,
-          legend = FALSE)
-
-
-# Add a title to the map
-map@map <- map@map %>%
-  addControl("<h2>2016 June Network 2 </h2>", position = "bottomleft", className = "map-title")
-
-map
-
-
-
-# 2017
-
-
-weather <- read.csv(".../Powdery_spillover_latlong_2017_v2_NW_github.csv", check.names=FALSE)
-
-
-hop_sites <- tibble(
-  sites_id = 1:35,
-  longitude = c(-122.845,
-                -122.8832,
-                -122.9142,
-                -122.8855,
-                -122.8751,
-                -122.8792,
-                -122.8792,
-                -122.9058,
-                -122.8815,
-                -122.8885,
-                -122.8455,
-                -122.8464,
-                -122.8443,
-                -122.7756,
-                -122.8455,
-                -122.8464,
-                -122.845,
-                -122.8433,
-                -122.8399,
-                -122.8353,
-                -122.8307,
-                -122.8266,
-                -122.83,
-                -122.8564,
-                -122.8533,
-                -122.7755,
-                -122.7797,
-                -122.7852,
-                -122.7861,
-                -122.7851,
-                -122.7928,
-                -122.7802,
-                -122.78,
-                -122.791,
-                -122.7907
-  ),
-  latitude = c(45.195,
-               45.1684,
-               45.2005,
-               45.1654,
-               45.1653,
-               45.1672,
-               45.1675,
-               45.1685,
-               45.1653,
-               45.1659,
-               45.199,
-               45.1996,
-               45.2025,
-               45.1979,
-               45.1173,
-               45.1174,
-               45.1173,
-               45.1177,
-               45.1179,
-               45.1177,
-               45.1177,
-               45.1176,
-               45.1137,
-               45.1144,
-               45.1126,
-               45.1889,
-               45.1964,
-               45.1931,
-               45.1898,
-               45.1962,
-               45.1905,
-               45.1897,
-               45.1986,
-               45.1883,
-               45.1865
-  )
-)
-
-
-
-Disease_incidence <- hop_sites %>%
-  st_as_sf(coords = c("longitude", "latitude"),
-           crs = 4326) %>%
-  st_transform(6440)
-
-
-
-Degree_centrality <- hop_sites %>%
-  st_as_sf(coords = c("longitude", "latitude"),
-           crs = 4326) %>%
-  st_transform(6440)
-
-
-Disease_incidence <- subset(Disease_incidence, select = -sites_id)
-Degree_centrality <- subset(Degree_centrality, select = -sites_id)
-
-
-
-# April
-# Network 1
-
-
-Disease_incidence$DiseaseinApril <- weather$DiseaseinApril
-Degree_centrality$Weighted_dc_aprmay1 <- weather$Weighted_dc_aprmay1
-
-# https://r-spatial.github.io/mapview/articles/mapview_02-advanced.html
-map <- mapview(Disease_incidence, ycol = "DiseaseinApril",  
-               col.regions=brewer.pal(5, "Accent"),lwd = 0.000,
-               legend = TRUE) + 
-  mapview(Degree_centrality, cex = "Weighted_dc_aprmay1", lwd = 2, 
-          col.regions=brewer.pal(5, "Accent"), alpha.regions = 0.00000000000000001,
-          legend = FALSE)
-
-
-# Add a title to the map
-map@map <- map@map %>%
-  addControl("<h2>2017 April Network 1 </h2>", position = "bottomleft", className = "map-title")
-
-map
-
-# Network 2
-
-Disease_incidence$DiseaseinApril <- weather$DiseaseinApril
-Degree_centrality$Weighted_dc_aprmay2 <- weather$Weighted_dc_aprmay2
-
-
-# https://r-spatial.github.io/mapview/articles/mapview_02-advanced.html
-map <- mapview(Disease_incidence, ycol = "DiseaseinApril",  
-               col.regions=brewer.pal(5, "Accent"),lwd = 0.000,
-               legend = TRUE) + 
-  mapview(Degree_centrality, cex = "Weighted_dc_aprmay2", lwd = 2, 
-          col.regions=brewer.pal(5, "Accent"), alpha.regions = 0.00000000000000001,
-          legend = FALSE)
-
-
-# Add a title to the map
-map@map <- map@map %>%
-  addControl("<h2>2017 April Network 2 </h2>", position = "bottomleft", className = "map-title")
-
-map
-
-
-# May
-# Network 1
-
-
-Disease_incidence$DiseaseinMay <- weather$DiseaseinMay
-Degree_centrality$Weighted_dc_mayjun1 <- weather$Weighted_dc_mayjun1
-
-
-# https://r-spatial.github.io/mapview/articles/mapview_02-advanced.html
-map <- mapview(Disease_incidence, ycol = "DiseaseinMay",  
-               col.regions=brewer.pal(5, "Accent"),lwd = 0.000,
-               legend = TRUE) + 
-  mapview(Degree_centrality, cex = "Weighted_dc_mayjun1", lwd = 2, 
-          col.regions=brewer.pal(5, "Accent"), alpha.regions = 0.00000000000000001,
-          legend = FALSE)
-
-
-# Add a title to the map
-map@map <- map@map %>%
-  addControl("<h2>2017 May Network 1 </h2>", position = "bottomleft", className = "map-title")
-
-map
-
-
-# Network 2
-
-Disease_incidence$DiseaseinMay <- weather$DiseaseinMay
-Degree_centrality$Weighted_dc_mayjun2 <- weather$Weighted_dc_mayjun2
-
-
-# https://r-spatial.github.io/mapview/articles/mapview_02-advanced.html
-map <- mapview(Disease_incidence, ycol = "DiseaseinMay",  
-               col.regions=brewer.pal(5, "Accent"),lwd = 0.000,
-               legend = TRUE) + 
-  mapview(Degree_centrality, cex = "Weighted_dc_mayjun2", lwd = 2, 
-          col.regions=brewer.pal(5, "Accent"), alpha.regions = 0.00000000000000001,
-          legend = FALSE)
-
-
-# Add a title to the map
-map@map <- map@map %>%
-  addControl("<h2>2017 May Network 2 </h2>", position = "bottomleft", className = "map-title")
-
-map
-
-
-# June 
-
-
-# Network 1
-
-Disease_incidence$DiseaseinJune <- weather$DiseaseinJune
-Degree_centrality$Weighted_dc_junjul1 <- weather$Weighted_dc_junjul1
-
-
-
-# https://r-spatial.github.io/mapview/articles/mapview_02-advanced.html
-map <- mapview(Disease_incidence, ycol = "DiseaseinJune",  
-               col.regions=brewer.pal(5, "Accent"),lwd = 0.000,
-               legend = TRUE) + 
-  mapview(Degree_centrality, cex = "Weighted_dc_junjul1", lwd = 2, 
-          col.regions=brewer.pal(5, "Accent"), alpha.regions = 0.00000000000000001,
-          legend = FALSE)
-
-
-# Add a title to the map
-map@map <- map@map %>%
-  addControl("<h2>2017 June Network 1 </h2>", position = "bottomleft", className = "map-title")
-
-map
-
-# Network 2
-
-Disease_incidence$DiseaseinJune <- weather$DiseaseinJune
-Degree_centrality$Weighted_dc_junjul2 <- weather$Weighted_dc_junjul2
-
-
-# https://r-spatial.github.io/mapview/articles/mapview_02-advanced.html
-map <- mapview(Disease_incidence, ycol = "DiseaseinJune",  
-               col.regions=brewer.pal(5, "Accent"),lwd = 0.000,
-               legend = TRUE) + 
-  mapview(Degree_centrality, cex = "Weighted_dc_junjul2", lwd = 2, 
-          col.regions=brewer.pal(5, "Accent"), alpha.regions = 0.00000000000000001,
-          legend = FALSE)
-
-
-# Add a title to the map
-map@map <- map@map %>%
-  addControl("<h2>2017 June Network 2 </h2>", position = "bottomleft", className = "map-title")
-
-map
+if (nrow(edges_df)) {
+  message("Edge weight range: ", paste(formatC(range(edges_df$w), format = "e", digits = 2), collapse = " to "))
+}
+message("Incoming centrality range: ",
+        paste(formatC(range(central_df$in_centrality), format = "e", digits = 2), collapse = " to "))
+
+plot_h <- max(5, 4.5 * length(years) + 1.0)
+ggsave(OUT_PNG, plot = p, width = 15, height = plot_h, dpi = 300,
+       bg = "white", limitsize = FALSE)
+message("Wrote ", OUT_PNG)
